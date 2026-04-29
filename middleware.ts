@@ -1,9 +1,10 @@
-import { auth } from '@/lib/auth'
-import { NextResponse } from 'next/server'
+import { getToken } from 'next-auth/jwt'
+import { NextResponse, type NextRequest } from 'next/server'
 
-export default auth((req) => {
+export default async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const role = req.auth?.user?.role
+  const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
+  const role = token?.role as string | undefined
 
   // Admin routes - only ADMIN role
   if (pathname.startsWith('/admin') && role !== 'ADMIN') {
@@ -16,7 +17,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: [
