@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { Plus_Jakarta_Sans } from "next/font/google";
 import "./globals.css";
 import { Providers } from "./providers";
+import { Header } from "@/components/shared/header";
+import { Footer } from "@/components/shared/footer";
 
 const plusJakarta = Plus_Jakarta_Sans({ 
   subsets: ["latin"],
@@ -48,7 +50,13 @@ export default function RootLayout({
   return (
     <html lang="en" className={plusJakarta.variable} data-scroll-behavior="smooth" suppressHydrationWarning>
       <body className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(249,115,22,0.12),_transparent_30%),linear-gradient(180deg,#fffdf9_0%,#fff8f2_36%,#fff_100%)] font-sans text-slate-900 antialiased selection:bg-orange-200 selection:text-orange-950">
-        <Providers>{children}</Providers>
+        <Providers>
+          <div className="flex min-h-screen flex-col">
+            <Header />
+            <main className="flex-1">{children}</main>
+            <Footer />
+          </div>
+        </Providers>
       </body>
     </html>
   );

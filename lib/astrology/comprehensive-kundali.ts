@@ -1,5 +1,5 @@
 import { calculateKundali } from './kundali'
-import { PlanetPosition } from './kundali'
+import { DivisionalChartData, DivisionalChartKey, PlanetPosition } from './kundali'
 import { calculatePanchangData } from './panchang-calculations'
 import { Language } from '../i18n'
 
@@ -193,6 +193,7 @@ export interface ComprehensiveKundaliReport {
   planetaryPositions: PlanetPosition[]
   houses: number[]
   ascendant: PlanetPosition
+  divisionalCharts: Record<DivisionalChartKey, DivisionalChartData>
   doshas: Dosha[]
   yogas: Yoga[]
   dashas: DashaPeriod[]
@@ -246,7 +247,7 @@ export async function generateComprehensiveReport(
   const [hour, minute] = tob ? tob.split(":").map(Number) : [12, 0]
   const birthDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0, 0))
   
-  const { planets, houses, ascendant } = calculateKundali({
+  const kundaliData = calculateKundali({
     year,
     month,
     day,
@@ -255,6 +256,7 @@ export async function generateComprehensiveReport(
     longitude,
     timezone,
   })
+  const { planets, houses, ascendant, divisionalCharts } = kundaliData
   
   const doshas = calculateDoshas(planets, houses, ascendant, latitude, longitude, timezone, language)
   const yogas = calculateYogas(planets, ascendant, language)
@@ -280,6 +282,7 @@ export async function generateComprehensiveReport(
     planetaryPositions: planets,
     houses,
     ascendant,
+    divisionalCharts,
     doshas,
     yogas,
     dashas,

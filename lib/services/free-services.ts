@@ -41,14 +41,6 @@ export const FREE_ASTROLOGY_SERVICES: FreeService[] = [
     category: "free",
   },
   {
-    slug: "dhruv-astro-software",
-    title: "Dhruv Astro Software",
-    subtitle: "Astro Dhruv Software",
-    description: "Astrology software utilities and learning tools.",
-    href: "/services/dhruv-astro-software",
-    category: "free",
-  },
-  {
     slug: "career-counselling",
     title: "Career Counselling",
     subtitle: "Career Counselling",
@@ -145,14 +137,6 @@ export const FREE_ASTROLOGY_SERVICES: FreeService[] = [
     category: "free",
   },
   {
-    slug: "online-astrology-software",
-    title: "Online Astrology Software",
-    subtitle: "free astrology software",
-    description: "Use astrology tools directly in your browser.",
-    href: "/services/online-astrology-software",
-    category: "free",
-  },
-  {
     slug: "hindi-kundli",
     title: "Hindi Kundli",
     subtitle: "free hindi kundli",
@@ -166,22 +150,6 @@ export const FREE_ASTROLOGY_SERVICES: FreeService[] = [
     subtitle: "free numerology calculator",
     description: "Calculate and interpret your numerology numbers.",
     href: "/services/numerology-calculator",
-    category: "free",
-  },
-  {
-    slug: "celebrity-horoscope",
-    title: "Celebrity Horoscope",
-    subtitle: "know about your celebrity horoscope",
-    description: "Explore celebrity charts and astrology breakdowns.",
-    href: "/services/celebrity-horoscope",
-    category: "free",
-  },
-  {
-    slug: "learn-astrology",
-    title: "Learn Astrology",
-    subtitle: "about vedic astrology",
-    description: "Learn core Vedic astrology concepts and methods.",
-    href: "/blog",
     category: "free",
   },
   {
@@ -230,14 +198,6 @@ export const FREE_ASTROLOGY_SERVICES: FreeService[] = [
     subtitle: "Get Today's Rahukalam - City Specific Local Rahu Kaal",
     description: "View city-specific Rahukaal timings for today.",
     href: "/panchang",
-    category: "free",
-  },
-  {
-    slug: "astrosage-tv",
-    title: "AstroSage TV",
-    subtitle: "Get free AstroSage TV",
-    description: "Spiritual and astrology media content.",
-    href: "/services/astrosage-tv",
     category: "free",
   },
   {

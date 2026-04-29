@@ -21,7 +21,12 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     })
 
-    return successResponse(charts)
+    return successResponse(
+      charts.map((chart) => ({
+        ...chart,
+        comprehensiveReport: chart.reportData ?? null,
+      }))
+    )
   } catch (err) {
     console.error("[KUNDALI_GET]", err)
     return errorResponse("Internal server error", 500)
@@ -40,18 +45,20 @@ export async function POST(req: Request) {
     }
 
     const { name, dob, tob, place } = parsed.data
+
+    const [year, month, day] = dob.split("-").map(Number)
+    const referenceDate = new Date(Date.UTC(year, month - 1, day, 12, 0, 0))
     
     // Geocode the place for user-specific kundali calculations
     let geoData
     try {
-      geoData = await geocodePlaceWithNominatim(place)
+      geoData = await geocodePlaceWithNominatim(place, referenceDate)
     } catch (geocodeError) {
       console.error("[KUNDALI_GEOCODE]", geocodeError)
       return errorResponse("Unable to resolve the birth place accurately. Please enter a more specific location.", 422)
     }
     
     // Parse date
-    const [year, month, day] = dob.split("-").map(Number)
     const [hour, minute] = tob ? tob.split(":").map(Number) : [12, 0]
     
     // Use user's birth place coordinates/timezone for kundali calculations
@@ -107,6 +114,7 @@ export async function POST(req: Request) {
           birthProfileId: birthProfile.id,
           chartStyle: "NORTH_INDIAN",
           chartData: kundaliData as any,
+          reportData: comprehensiveReport as any,
         },
         include: { birthProfile: true },
       })

@@ -7,8 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Header } from "@/components/shared/header"
-import { Footer } from "@/components/shared/footer"
+// Header/Footer are provided globally in the root layout
 import { NorthIndianChart } from "@/components/astrology/north-indian-chart"
 import type { PlanetPosition, DivisionalChartData, DivisionalChartKey } from "@/lib/astrology/kundali"
 import { pdf } from '@react-pdf/renderer'
@@ -286,8 +285,6 @@ function KundaliContent() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <Header showRashis={false} />
-      
       <main className="flex-1 bg-gradient-to-b from-orange-50 to-white py-12">
         <div className="container mx-auto px-4">
           <div className="mx-auto max-w-7xl">
@@ -455,7 +452,7 @@ function KundaliContent() {
                       {/* Basic Details Table */}
                       <div>
                         <h3 className="mb-2 text-sm font-semibold text-gray-500 uppercase">{t.birthDetailsTitle}</h3>
-                        <div className="overflow-x-auto rounded-lg border">
+                        <div className="overflow-x-auto rounded-lg border p-4">
                           <table className="w-full text-sm">
                             <tbody className="divide-y divide-gray-100">
                             <tr>
@@ -520,7 +517,7 @@ function KundaliContent() {
                       {/* Additional Details Table */}
                       <div>
                         <h3 className="mb-2 text-sm font-semibold text-gray-500 uppercase">{language === 'hi' ? 'अतिरिक्त विवरण' : 'Additional Details'}</h3>
-                        <div className="overflow-x-auto rounded-lg border">
+                        <div className="overflow-x-auto rounded-lg border p-4">
                           <table className="w-full text-sm">
                             <tbody className="divide-y divide-gray-100">
                             <tr>
@@ -1151,7 +1148,6 @@ function KundaliContent() {
       </div>
       </main>
 
-    <Footer />
   </div>
   )
 }

@@ -94,16 +94,19 @@ export function PanchangKundliSection({
           <div className="order-2">
             <Card className="h-full border-orange-200 shadow-lg">
               <CardHeader className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-5 w-5" />
-                  <CardTitle className="text-xl font-semibold">Generate Your Kundali</CardTitle>
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-5 w-5" />
+                      <CardTitle className="text-lg font-semibold">Generate Your Kundali</CardTitle>
+                    </div>
+                    <p className="text-sm text-orange-100 mt-1">Fill your birth details for a precise report</p>
+                  </div>
+                  <div className="text-right text-xs text-orange-200">
+                    {MAHAKAAL_TIMEZONE_INFO.shortName} • {MAHAKAAL_TIMEZONE_INFO.utcOffset}
+                    <div>Ujjain (Mahakaal)</div>
+                  </div>
                 </div>
-                <p className="text-sm text-orange-100">
-                  Fill in your birth details to get a comprehensive Vedic astrology report
-                </p>
-                <p className="text-xs text-orange-200">
-                  Using {MAHAKAAL_TIMEZONE_INFO.shortName} ({MAHAKAAL_TIMEZONE_INFO.utcOffset}) • Ujjain (Mahakaal)
-                </p>
               </CardHeader>
               <CardContent className="p-6">
                 <form onSubmit={onSubmit} className="space-y-4">
@@ -189,7 +192,7 @@ export function PanchangKundliSection({
                   {/* Submit Button */}
                   <Button
                     type="submit"
-                    className="w-full bg-gradient-to-r from-orange-600 to-red-600 py-6 text-lg font-semibold hover:from-orange-700 hover:to-red-700"
+                    className="w-full bg-gradient-to-r from-orange-600 to-red-600 py-3 text-sm font-semibold hover:from-orange-700 hover:to-red-700"
                     disabled={isLoading}
                   >
                     {isLoading ? (

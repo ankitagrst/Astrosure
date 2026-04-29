@@ -14,7 +14,7 @@ export interface User {
 
 export interface BirthProfile {
   id: string
-  userId: string
+    divisionalCharts?: Record<string, unknown>
   name: string
   dob: Date
   tob?: string

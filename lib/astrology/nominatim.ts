@@ -1,3 +1,6 @@
+import tzlookup from "tz-lookup"
+import { getTimezoneOffset } from "date-fns-tz"
+
 interface NominatimResult {
   place_id: number
   licence: string
@@ -14,6 +17,11 @@ interface NominatimResult {
     country?: string
     country_code?: string
   }
+}
+
+function resolveTimezone(latitude: number, longitude: number, referenceDate: Date): number {
+  const timeZone = tzlookup(latitude, longitude)
+  return getTimezoneOffset(timeZone, referenceDate) / 3_600_000
 }
 
 export async function searchPlaces(query: string): Promise<NominatimResult[]> {
@@ -41,7 +49,7 @@ export async function searchPlaces(query: string): Promise<NominatimResult[]> {
   }
 }
 
-export async function geocodePlaceWithNominatim(place: string): Promise<{
+export async function geocodePlaceWithNominatim(place: string, referenceDate: Date = new Date()): Promise<{
   lat: number
   lng: number
   timezone: number
@@ -58,9 +66,8 @@ export async function geocodePlaceWithNominatim(place: string): Promise<{
   const result = results[0]
   const lat = parseFloat(result.lat)
   const lng = parseFloat(result.lon)
-  
-  // Estimate timezone based on longitude (simplified)
-  const timezone = Math.round(lng / 15 * 10) / 10
+
+  const timezone = resolveTimezone(lat, lng, referenceDate)
   
   return {
     lat,
