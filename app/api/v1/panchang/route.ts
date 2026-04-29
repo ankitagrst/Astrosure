@@ -1,8 +1,6 @@
 import { errorResponse, successResponse } from "@/lib/api-response"
+import { calculatePanchangData } from "@/lib/astrology/panchang-calculations"
 import { Language } from "@/lib/i18n"
-
-// Use Node.js runtime for WASM support (Swiss Ephemeris)
-export const runtime = 'nodejs'
 
 export async function GET(req: Request) {
   try {
@@ -17,16 +15,6 @@ export async function GET(req: Request) {
 
     if (Number.isNaN(date.getTime()) || Number.isNaN(lat) || Number.isNaN(lng) || Number.isNaN(timezone)) {
       return errorResponse("Invalid date or location parameters", 422)
-    }
-
-    // Dynamic import to handle WASM module errors gracefully
-    let calculatePanchangData
-    try {
-      const module = await import("@/lib/astrology/panchang-calculations")
-      calculatePanchangData = module.calculatePanchangData
-    } catch (importErr) {
-      console.error("[PANCHANG_GET] Failed to import calculations module:", importErr)
-      return errorResponse("Astrology calculations temporarily unavailable. Please try again later.", 503)
     }
 
     const panchang = calculatePanchangData(date, lat, lng, timezone, language)

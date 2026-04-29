@@ -3,21 +3,14 @@ import { prisma } from "@/lib/db"
 import { successResponse, errorResponse } from "@/lib/api-response"
 import { birthProfileSchema } from "@/lib/validations/kundali"
 import { geocodePlaceWithNominatim } from "@/lib/astrology/nominatim"
+import { calculateKundali } from "@/lib/astrology/kundali"
+import { generateComprehensiveReport } from "@/lib/astrology/comprehensive-kundali"
 import { Language } from "@/lib/i18n"
-
-// Use Node.js runtime for WASM support (Swiss Ephemeris)
-export const runtime = 'nodejs'
 
 // GET - List saved charts (requires authentication)
 export async function GET() {
   try {
-    let session = null
-    try {
-      session = await auth()
-    } catch (authErr) {
-      console.error("[KUNDALI_GET] Auth error:", authErr)
-      return errorResponse("Unauthorized. Please sign in to view saved charts.", 401)
-    }
+    const session = await auth()
     if (!session) return errorResponse("Unauthorized. Please sign in to view saved charts.", 401)
 
     const charts = await prisma.kundaliChart.findMany({
@@ -35,13 +28,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    let session = null
-    try {
-      session = await auth()
-    } catch (authErr) {
-      console.error("[KUNDALI_POST] Auth error (continuing as anonymous):", authErr)
-      // Continue without session for anonymous users
-    }
+    const session = await auth()
     const body = await req.json()
     const parsed = birthProfileSchema.safeParse(body)
     const language = (body.language || "en") as Language
@@ -65,39 +52,28 @@ export async function POST(req: Request) {
     const calcTimezone = geoData.timezone
     const displayPlace = geoData.formattedPlace || place
 
-    // Dynamic import of calculation modules to handle WASM errors gracefully
-    let kundaliData
-    let comprehensiveReport
-    try {
-      const kundaliModule = await import("@/lib/astrology/kundali")
-      const reportModule = await import("@/lib/astrology/comprehensive-kundali")
-      
-      // Calculate kundali using user's birth place coordinates
-      kundaliData = kundaliModule.calculateKundali({
-        year,
-        month,
-        day,
-        hour: hour + minute / 60,
-        latitude: calcLatitude,
-        longitude: calcLongitude,
-        timezone: calcTimezone,
-      })
+    // Calculate kundali using user's birth place coordinates
+    const kundaliData = calculateKundali({
+      year,
+      month,
+      day,
+      hour: hour + minute / 60,
+      latitude: calcLatitude,
+      longitude: calcLongitude,
+      timezone: calcTimezone,
+    })
 
-      // Generate comprehensive report using user's birth place coordinates
-      comprehensiveReport = await reportModule.generateComprehensiveReport(
-        name,
-        dob,
-        tob || null,
-        displayPlace,
-        calcLatitude,
-        calcLongitude,
-        calcTimezone,
-        language
-      )
-    } catch (calcErr) {
-      console.error("[KUNDALI_POST] Calculation error:", calcErr)
-      return errorResponse("Astrology calculations temporarily unavailable. Please try again later.", 503)
-    }
+    // Generate comprehensive report using user's birth place coordinates
+    const comprehensiveReport = await generateComprehensiveReport(
+      name,
+      dob,
+      tob || null,
+      displayPlace,
+      calcLatitude,
+      calcLongitude,
+      calcTimezone,
+      language
+    )
 
     // If user is authenticated, save the chart
     if (session) {
