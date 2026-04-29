@@ -45,13 +45,6 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL('/login', req.url))
   }
 
-  // API routes - return 401 instead of redirect
-  if (pathname.startsWith('/api/v1')) {
-    if (!role) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-  }
-
   return NextResponse.next()
 }
 
@@ -61,12 +54,6 @@ export const config = {
     '/dashboard/:path*',
     '/admin/:path*',
     '/astrologer-portal/:path*',
-    '/api/v1/kundali',
-    '/api/v1/matching/:path*',
-    '/api/v1/consultations/:path*',
-    '/api/v1/puja/:path*',
-    '/api/v1/shop/:path*',
-    '/api/v1/orders/:path*',
-    '/api/v1/payments/:path*',
+    // Note: API routes use Node.js runtime for WASM support, handle auth internally
   ],
 }
