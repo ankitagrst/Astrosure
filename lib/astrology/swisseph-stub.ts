@@ -2,6 +2,8 @@
 // Uses @fusionstrings/swisseph-wasm for precise planetary positions.
 // Houses are derived deterministically from computed sidereal ascendant.
 
+import { createRequire } from 'node:module'
+
 export const SE_GREG_CAL = 1
 
 // Swiss flags/constants used by this project
@@ -36,9 +38,10 @@ function getSwe(): SweModule {
   }
 
   try {
-    const req = eval('require') as (name: string) => SweModule
-    sweModuleCache = req('@fusionstrings/swisseph-wasm')
-    return sweModuleCache
+    const require = createRequire(import.meta.url)
+    const module = require('@fusionstrings/swisseph-wasm') as SweModule
+    sweModuleCache = module
+    return module
   } catch (error) {
     throw new Error(`Swiss Ephemeris WASM backend is unavailable: ${(error as Error).message}`)
   }
