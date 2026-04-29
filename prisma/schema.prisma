@@ -1,0 +1,258 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ASTROLOGER
+  ADMIN
+}
+
+enum ChartStyle {
+  NORTH_INDIAN
+  SOUTH_INDIAN
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  password      String
+  role          Role     @default(USER)
+  phone         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  birthProfiles BirthProfile[]
+  kundaliCharts KundaliChart[]
+  pujaBookings  PujaBooking[]
+  orders        Order[]
+  donations     Donation[]
+  consultations Consultation[]
+  savedServices SavedService[]
+
+  @@map("users")
+}
+
+model SavedService {
+  id          String   @id @default(cuid())
+  userId      String
+  serviceSlug String   @db.VarChar(50)
+  serviceName String
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, serviceSlug])
+  @@index([userId])
+  @@map("saved_services")
+}
+
+model BirthProfile {
+  id          String      @id @default(cuid())
+  userId      String
+  name        String
+  dob         DateTime
+  tob         String?
+  tobUnknown  Boolean     @default(false)
+  place       String
+  latitude    Float
+  longitude   Float
+  timezone    String
+  createdAt   DateTime    @default(now())
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  kundaliCharts KundaliChart[]
+
+  @@map("birth_profiles")
+}
+
+model KundaliChart {
+  id              String     @id @default(cuid())
+  userId          String
+  birthProfileId  String
+  chartStyle      ChartStyle @default(NORTH_INDIAN)
+  chartData       Json
+  reportData      Json?
+  pdfUrl          String?
+  createdAt       DateTime   @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  birthProfile BirthProfile @relation(fields: [birthProfileId], references: [id])
+
+  @@map("kundali_charts")
+}
+
+model MatchingReport {
+  id          String   @id @default(cuid())
+  userId      String
+  profile1Id  String
+  profile2Id  String
+  gunScore    Int
+  reportData  Json
+  pdfUrl      String?
+  createdAt   DateTime @default(now())
+
+  @@map("matching_reports")
+}
+
+model Astrologer {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  bio           String?  @db.Text
+  specialties   Json
+  experience    Int
+  languages     Json
+  rating        Float    @default(0)
+  isVerified    Boolean  @default(false)
+  isActive      Boolean  @default(true)
+  perMinuteRate Int
+  createdAt     DateTime @default(now())
+
+  consultations Consultation[]
+
+  @@map("astrologers")
+}
+
+model Consultation {
+  id            String   @id @default(cuid())
+  userId        String
+  astrologerId  String
+  type          String
+  status        String
+  scheduledAt   DateTime?
+  durationMins  Int?
+  amount        Int
+  notes         String?  @db.Text
+  createdAt     DateTime @default(now())
+
+  user       User       @relation(fields: [userId], references: [id])
+  astrologer Astrologer @relation(fields: [astrologerId], references: [id])
+
+  @@map("consultations")
+}
+
+model PujaCategory {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String? @db.Text
+  imageUrl    String?
+  isActive    Boolean @default(true)
+
+  pujas Puja[]
+
+  @@map("puja_categories")
+}
+
+model Puja {
+  id          String   @id @default(cuid())
+  categoryId  String
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  imageUrl    String?
+  startPrice  Int
+  isActive    Boolean  @default(true)
+  isGroup     Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  category     PujaCategory  @relation(fields: [categoryId], references: [id])
+  bookings     PujaBooking[]
+
+  @@map("pujas")
+}
+
+model PujaBooking {
+  id          String   @id @default(cuid())
+  userId      String
+  pujaId      String
+  scheduledAt DateTime
+  amount      Int
+  status      String
+  paymentId   String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+  puja Puja @relation(fields: [pujaId], references: [id])
+
+  @@map("puja_bookings")
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  description String?  @db.Text
+  price       Int
+  imageUrl    String?
+  stock       Int      @default(0)
+  category    String
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  orderItems OrderItem[]
+
+  @@map("products")
+}
+
+model Order {
+  id          String      @id @default(cuid())
+  userId      String
+  totalAmount Int
+  status      String
+  paymentId   String?
+  address     Json
+  createdAt   DateTime    @default(now())
+
+  user  User        @relation(fields: [userId], references: [id])
+  items OrderItem[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String @id @default(cuid())
+  orderId   String
+  productId String
+  quantity  Int
+  price     Int
+
+  order   Order   @relation(fields: [orderId], references: [id])
+  product Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
+
+model Donation {
+  id          String   @id @default(cuid())
+  userId      String?
+  amount      Int
+  message     String?
+  paymentId   String?
+  createdAt   DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@map("donations")
+}
+
+model BlogPost {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  content     String   @db.LongText
+  excerpt     String?
+  imageUrl    String?
+  authorId    String
+  isPublished Boolean  @default(false)
+  publishedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@map("blog_posts")
+}
