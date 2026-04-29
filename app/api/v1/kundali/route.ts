@@ -7,6 +7,8 @@ import { calculateKundali } from "@/lib/astrology/kundali"
 import { generateComprehensiveReport } from "@/lib/astrology/comprehensive-kundali"
 import { Language } from "@/lib/i18n"
 
+export const runtime = "nodejs"
+
 // GET - List saved charts (requires authentication)
 export async function GET() {
   try {
@@ -40,7 +42,13 @@ export async function POST(req: Request) {
     const { name, dob, tob, place } = parsed.data
     
     // Geocode the place for user-specific kundali calculations
-    const geoData = await geocodePlaceWithNominatim(place)
+    let geoData
+    try {
+      geoData = await geocodePlaceWithNominatim(place)
+    } catch (geocodeError) {
+      console.error("[KUNDALI_GEOCODE]", geocodeError)
+      return errorResponse("Unable to resolve the birth place accurately. Please enter a more specific location.", 422)
+    }
     
     // Parse date
     const [year, month, day] = dob.split("-").map(Number)

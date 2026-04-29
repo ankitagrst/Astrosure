@@ -2,6 +2,8 @@ import { errorResponse, successResponse } from "@/lib/api-response"
 import { calculatePanchangData } from "@/lib/astrology/panchang-calculations"
 import { Language } from "@/lib/i18n"
 
+export const runtime = "nodejs"
+
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)

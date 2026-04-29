@@ -208,13 +208,6 @@ export async function geocodePlace(place: string): Promise<{
       }
     }
   }
-  
-  // Fallback to Delhi (default for India)
-  console.warn(`Place not found: ${place}. Using Delhi as default.`)
-  return {
-    lat: 28.6139,
-    lng: 77.2090,
-    timezone: 5.5,
-    formattedPlace: place.charAt(0).toUpperCase() + place.slice(1),
-  }
+
+  throw new Error(`Unable to geocode place: ${place}`)
 }
