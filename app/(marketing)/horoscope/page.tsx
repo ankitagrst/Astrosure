@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -16,259 +16,145 @@ import {
   Sparkles,
   Clock,
   Star,
+  RefreshCw,
+  Loader2,
+  AlertCircle,
 } from "lucide-react"
+import {
+  DailyHoroscopeResponse,
+  HOROSCOPE_PROFILES,
+  HOROSCOPE_SIGNS,
+  getHoroscopeGradient,
+} from "@/lib/astrology/horoscope-data"
 
-interface ZodiacData {
-  symbol: string
-  dateRange: string
-  element: string
-  rulingPlanet: string
-  luckyColor: string
-  luckyNumber: number
-  mood: string
-  guidance: string
-  strength: string
-  challenge: string
-  compatibility: string[]
-}
-
-const ZODIAC_SIGNS = [
-  "Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
-  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces",
-]
-
-const SIGN_DATA: Record<string, ZodiacData> = {
-  Aries: {
-    symbol: "♈",
-    dateRange: "Mar 21 - Apr 19",
-    element: "Fire",
-    rulingPlanet: "Mars",
-    luckyColor: "Red",
-    luckyNumber: 1,
-    mood: "Energetic",
-    guidance: "Take initiative today, but keep your tone calm in discussions. Your energy is high — channel it towards meaningful goals rather than impulsive moves.",
-    strength: "Courageous, determined, confident",
-    challenge: "Impatience, impulsiveness",
-    compatibility: ["Leo", "Sagittarius", "Gemini", "Aquarius"]
-  },
-  Taurus: {
-    symbol: "♉",
-    dateRange: "Apr 20 - May 20",
-    element: "Earth",
-    rulingPlanet: "Venus",
-    luckyColor: "Green",
-    luckyNumber: 6,
-    mood: "Grounded",
-    guidance: "Steady effort brings gains; avoid unnecessary spending. Focus on consolidating recent wins and building on solid ground.",
-    strength: "Reliable, practical, devoted",
-    challenge: "Stubbornness, materialism",
-    compatibility: ["Virgo", "Capricorn", "Cancer", "Pisces"]
-  },
-  Gemini: {
-    symbol: "♊",
-    dateRange: "May 21 - Jun 20",
-    element: "Air",
-    rulingPlanet: "Mercury",
-    luckyColor: "Yellow",
-    luckyNumber: 5,
-    mood: "Communicative",
-    guidance: "Communication opens opportunities; verify details twice before committing. Your words have power today — use them wisely.",
-    strength: "Adaptable, outgoing, intelligent",
-    challenge: "Indecisiveness, inconsistency",
-    compatibility: ["Libra", "Aquarius", "Aries", "Leo"]
-  },
-  Cancer: {
-    symbol: "♋",
-    dateRange: "Jun 21 - Jul 22",
-    element: "Water",
-    rulingPlanet: "Moon",
-    luckyColor: "Silver",
-    luckyNumber: 2,
-    mood: "Nurturing",
-    guidance: "Family and self-care need equal priority today. Trust your instincts and nurture both relationships and inner peace.",
-    strength: "Intuitive, protective, sensitive",
-    challenge: "Moodiness, oversensitivity",
-    compatibility: ["Scorpio", "Pisces", "Taurus", "Virgo"]
-  },
-  Leo: {
-    symbol: "♌",
-    dateRange: "Jul 23 - Aug 22",
-    element: "Fire",
-    rulingPlanet: "Sun",
-    luckyColor: "Gold",
-    luckyNumber: 1,
-    mood: "Confident",
-    guidance: "Lead by example and avoid ego-driven decisions. Your natural charisma is an asset — use it to inspire, not dominate.",
-    strength: "Generous, warm-hearted, creative",
-    challenge: "Arrogance, pride",
-    compatibility: ["Sagittarius", "Aries", "Gemini", "Libra"]
-  },
-  Virgo: {
-    symbol: "♍",
-    dateRange: "Aug 23 - Sep 22",
-    element: "Earth",
-    rulingPlanet: "Mercury",
-    luckyColor: "Navy",
-    luckyNumber: 5,
-    mood: "Analytical",
-    guidance: "Structure your tasks and complete one priority at a time. Attention to detail will pay off handsomely today.",
-    strength: "Practical, diligent, reliable",
-    challenge: "Perfectionism, overthinking",
-    compatibility: ["Capricorn", "Taurus", "Cancer", "Scorpio"]
-  },
-  Libra: {
-    symbol: "♎",
-    dateRange: "Sep 23 - Oct 22",
-    element: "Air",
-    rulingPlanet: "Venus",
-    luckyColor: "Pink",
-    luckyNumber: 6,
-    mood: "Balanced",
-    guidance: "Maintain balance in relationships and commitments. Weigh options carefully before making important decisions.",
-    strength: "Diplomatic, fair-minded, social",
-    challenge: "Indecisiveness, avoidance",
-    compatibility: ["Aquarius", "Gemini", "Leo", "Sagittarius"]
-  },
-  Scorpio: {
-    symbol: "♏",
-    dateRange: "Oct 23 - Nov 21",
-    element: "Water",
-    rulingPlanet: "Mars",
-    luckyColor: "Deep Red",
-    luckyNumber: 8,
-    mood: "Intense",
-    guidance: "Channel intensity into focused work and patience. Your determination is unmatched — direct it towards transformation.",
-    strength: "Passionate, resourceful, brave",
-    challenge: "Jealousy, secretiveness",
-    compatibility: ["Pisces", "Cancer", "Virgo", "Capricorn"]
-  },
-  Sagittarius: {
-    symbol: "♐",
-    dateRange: "Nov 22 - Dec 21",
-    element: "Fire",
-    rulingPlanet: "Jupiter",
-    luckyColor: "Purple",
-    luckyNumber: 3,
-    mood: "Adventurous",
-    guidance: "Expand learning and avoid overpromising timelines. Adventure awaits, but wisdom comes from careful planning.",
-    strength: "Optimistic, freedom-loving, honest",
-    challenge: "Overconfidence, tactlessness",
-    compatibility: ["Aries", "Leo", "Libra", "Aquarius"]
-  },
-  Capricorn: {
-    symbol: "♑",
-    dateRange: "Dec 22 - Jan 19",
-    element: "Earth",
-    rulingPlanet: "Saturn",
-    luckyColor: "Brown",
-    luckyNumber: 10,
-    mood: "Disciplined",
-    guidance: "Discipline and planning will outperform haste. Your hard work is noticed — keep climbing steadily toward your goals.",
-    strength: "Responsible, disciplined, self-controlled",
-    challenge: "Pessimism, coldness",
-    compatibility: ["Taurus", "Virgo", "Scorpio", "Pisces"]
-  },
-  Aquarius: {
-    symbol: "♒",
-    dateRange: "Jan 20 - Feb 18",
-    element: "Air",
-    rulingPlanet: "Uranus",
-    luckyColor: "Cyan",
-    luckyNumber: 4,
-    mood: "Innovative",
-    guidance: "Innovative ideas work best with practical execution. Your unique perspective is valuable — share it confidently.",
-    strength: "Humanitarian, independent, intellectual",
-    challenge: "Detachment, unpredictability",
-    compatibility: ["Gemini", "Libra", "Sagittarius", "Aries"]
-  },
-  Pisces: {
-    symbol: "♓",
-    dateRange: "Feb 19 - Mar 20",
-    element: "Water",
-    rulingPlanet: "Neptune",
-    luckyColor: "Sea Green",
-    luckyNumber: 7,
-    mood: "Creative",
-    guidance: "Trust intuition, but ground decisions in facts. Creativity flows — use it to bring dreams closer to reality.",
-    strength: "Compassionate, artistic, intuitive",
-    challenge: "Escapism, oversensitivity",
-    compatibility: ["Cancer", "Scorpio", "Taurus", "Capricorn"]
-  },
-}
-
-const getSignGradient = (sign: string): string => {
-  const gradients: Record<string, string> = {
-    Aries: "from-red-500 to-orange-400",
-    Taurus: "from-green-500 to-emerald-400",
-    Gemini: "from-yellow-500 to-orange-400",
-    Cancer: "from-blue-500 to-cyan-400",
-    Leo: "from-yellow-600 to-orange-500",
-    Virgo: "from-indigo-500 to-blue-400",
-    Libra: "from-pink-500 to-rose-400",
-    Scorpio: "from-red-700 to-red-500",
-    Sagittarius: "from-purple-600 to-blue-500",
-    Capricorn: "from-gray-700 to-slate-600",
-    Aquarius: "from-cyan-500 to-blue-500",
-    Pisces: "from-teal-500 to-cyan-400",
-  }
-  return gradients[sign] || "from-orange-500 to-yellow-400"
-}
-
-const getElementIcon = (element: string) => {
+function getElementIcon(element: string) {
   switch (element) {
     case "Fire":
-      return <Flame className="w-5 h-5 text-red-500" />
+      return <Flame className="h-5 w-5 text-red-500" />
     case "Earth":
-      return <Mountain className="w-5 h-5 text-green-700" />
+      return <Mountain className="h-5 w-5 text-green-700" />
     case "Air":
-      return <Wind className="w-5 h-5 text-blue-400" />
+      return <Wind className="h-5 w-5 text-blue-500" />
     case "Water":
-      return <Droplets className="w-5 h-5 text-blue-500" />
+      return <Droplets className="h-5 w-5 text-cyan-600" />
     default:
-      return null
+      return <Sparkles className="h-5 w-5 text-orange-500" />
   }
+}
+
+function formatDateLabel(dateText: string) {
+  const date = new Date(`${dateText}T12:00:00`)
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+  })
+}
+
+function LoadingPanel() {
+  return (
+    <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
+      <CardContent className="flex min-h-[360px] flex-col items-center justify-center gap-4 py-10 text-gray-600">
+        <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+        <p className="text-sm font-medium">Calculating today's horoscope...</p>
+      </CardContent>
+    </Card>
+  )
 }
 
 export default function PublicHoroscopePage() {
-  const [selectedSign, setSelectedSign] = useState<string>("Aries")
-  const sign = selectedSign
-  const data = SIGN_DATA[sign] || SIGN_DATA.Aries
+  const [selectedSign, setSelectedSign] = useState<(typeof HOROSCOPE_SIGNS)[number]>("Aries")
+  const [horoscope, setHoroscope] = useState<DailyHoroscopeResponse | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [reloadIndex, setReloadIndex] = useState(0)
+
+  const today = useMemo(() => new Date().toISOString().split("T")[0], [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    async function loadHoroscope() {
+      setIsLoading(true)
+      setError(null)
+
+      try {
+        const response = await fetch(`/api/v1/horoscope/daily?sign=${encodeURIComponent(selectedSign)}&date=${today}`, {
+          signal: controller.signal,
+        })
+
+        const result = await response.json()
+
+        if (!response.ok) {
+          throw new Error(result?.message || "Unable to load horoscope")
+        }
+
+        setHoroscope(result.data as DailyHoroscopeResponse)
+      } catch (fetchError) {
+        if (!controller.signal.aborted) {
+          setError(fetchError instanceof Error ? fetchError.message : "Unable to load horoscope")
+          setHoroscope(null)
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false)
+        }
+      }
+    }
+
+    loadHoroscope()
+
+    return () => controller.abort()
+  }, [selectedSign, today, reloadIndex])
+
+  const activeHoroscope = horoscope
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-orange-50 to-white">
       <div className="container mx-auto px-4 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-red-500 bg-clip-text text-transparent">
-            Daily Horoscope
-          </h1>
-          <p className="text-gray-600 mt-2">Personalized cosmic guidance for your zodiac sign</p>
+        <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-orange-600 to-red-500 bg-clip-text text-transparent">
+              Daily Horoscope
+            </h1>
+            <p className="mt-2 text-gray-600">Panchang-based daily guidance for your zodiac sign</p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setReloadIndex((value) => value + 1)}
+            className="inline-flex items-center gap-2 self-start rounded-full border border-orange-200 bg-white px-4 py-2 text-sm font-semibold text-orange-700 shadow-sm transition hover:bg-orange-50"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
         </div>
 
-        {/* Main Layout: Sidebar + Content */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Sidebar - Zodiac Selector */}
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-4">
           <div className="lg:col-span-1">
-            <div className="rounded-2xl bg-white shadow-lg p-4 sticky top-20">
-              <h2 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4">Zodiac Signs</h2>
-              <div className="grid grid-cols-3 lg:grid-cols-2 gap-2">
-                {ZODIAC_SIGNS.map((signName) => {
+            <div className="sticky top-20 rounded-2xl bg-white p-4 shadow-lg">
+              <div className="mb-4">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-gray-900">Zodiac Signs</h2>
+                <p className="mt-1 text-xs text-gray-500">Pick a sign to recalculate the horoscope</p>
+              </div>
+              <div className="grid grid-cols-3 gap-2 lg:grid-cols-2">
+                {HOROSCOPE_SIGNS.map((signName) => {
+                  const profile = HOROSCOPE_PROFILES[signName]
                   const isSelected = selectedSign === signName
-                  const signInfo = SIGN_DATA[signName]
+
                   return (
                     <button
                       key={signName}
+                      type="button"
                       onClick={() => setSelectedSign(signName)}
-                      className={`rounded-lg py-2 px-2 text-xs font-semibold transition-all duration-300 transform hover:scale-105 ${
+                      className={`rounded-xl px-2 py-3 text-xs font-semibold transition-all duration-300 hover:scale-[1.02] ${
                         isSelected
-                          ? `bg-gradient-to-br ${getSignGradient(signName)} text-white shadow-lg`
-                          : "bg-gray-100 text-gray-700 hover:bg-orange-50"
+                          ? `bg-gradient-to-br ${getHoroscopeGradient(signName)} text-white shadow-lg`
+                          : "border border-gray-100 bg-gray-50 text-gray-700 hover:border-orange-200 hover:bg-orange-50"
                       }`}
-                      title={signName}
                     >
                       <div className="flex flex-col items-center gap-1">
-                        <span className="text-lg">{signInfo.symbol}</span>
-                        <span className="text-xs">{signName.slice(0, 3)}</span>
+                        <span className="text-lg">{profile.symbol}</span>
+                        <span>{signName.slice(0, 3)}</span>
                       </div>
                     </button>
                   )
@@ -277,160 +163,213 @@ export default function PublicHoroscopePage() {
             </div>
           </div>
 
-          {/* Right Content Area */}
           <div className="lg:col-span-3 space-y-6">
-            {/* Header Card */}
-            <div className={`rounded-2xl bg-gradient-to-br ${getSignGradient(sign)} p-6 text-white shadow-xl`}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <span className="text-5xl">{data.symbol}</span>
+            {error ? (
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0" />
                   <div>
-                    <h1 className="text-3xl font-bold">{sign}</h1>
-                    <p className="text-sm opacity-90 flex items-center gap-1 mt-1">
-                      <Clock className="w-4 h-4" />
-                      {data.dateRange}
-                    </p>
+                    <p className="font-semibold">Horoscope temporarily unavailable</p>
+                    <p>{error}</p>
                   </div>
-                </div>
-                <Badge className="bg-white text-gray-900 font-semibold">{data.mood}</Badge>
-              </div>
-            </div>
-
-            {/* Quick Info Cards */}
-            <div className="grid grid-cols-3 gap-4">
-              <Card className="border-0 shadow-md rounded-xl overflow-hidden">
-                <CardHeader className="pb-3 bg-gradient-to-r from-green-50 to-emerald-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    {getElementIcon(data.element)}
-                    <p className="text-xs font-semibold text-gray-600 uppercase">Element</p>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <p className="text-lg font-bold text-gray-900">{data.element}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-md rounded-xl overflow-hidden">
-                <CardHeader className="pb-3 bg-gradient-to-r from-purple-50 to-blue-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="w-4 h-4 text-purple-600" />
-                    <p className="text-xs font-semibold text-gray-600 uppercase">Ruling Planet</p>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <p className="text-lg font-bold text-gray-900">{data.rulingPlanet}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-md rounded-xl overflow-hidden">
-                <CardHeader className="pb-3 bg-gradient-to-r from-yellow-50 to-orange-50">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Sparkles className="w-4 h-4 text-yellow-600" />
-                    <p className="text-xs font-semibold text-gray-600 uppercase">Lucky #</p>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-3">
-                  <p className="text-2xl font-bold text-gray-900">{data.luckyNumber}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Guidance Card */}
-            <Card className="border-0 shadow-lg rounded-2xl overflow-hidden">
-              <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50 border-b border-orange-100">
-                <div className="flex items-center gap-2">
-                  <Lightbulb className="w-5 h-5 text-orange-600" />
-                  <CardTitle className="text-orange-900">Today's Cosmic Guidance</CardTitle>
-                </div>
-              </CardHeader>
-              <CardContent className="pt-6">
-                <p className="text-gray-700 leading-relaxed">{data.guidance}</p>
-              </CardContent>
-            </Card>
-
-            {/* Strengths & Challenges */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-0 shadow-md rounded-xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100">
-                  <div className="flex items-center gap-2">
-                    <Heart className="w-5 h-5 text-green-600" />
-                    <CardTitle className="text-green-900 text-base">Your Strengths</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <p className="text-gray-700 text-sm">{data.strength}</p>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-md rounded-xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100">
-                  <div className="flex items-center gap-2">
-                    <Target className="w-5 h-5 text-amber-600" />
-                    <CardTitle className="text-amber-900 text-base">Challenges</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <p className="text-gray-700 text-sm">{data.challenge}</p>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Lucky Color & Compatible Signs */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <Card className="border-0 shadow-md rounded-xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100">
-                  <div className="flex items-center gap-2">
-                    <Palette className="w-5 h-5 text-purple-600" />
-                    <CardTitle className="text-purple-900 text-base">Lucky Color</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="flex items-center gap-3">
-                    <div
-                      className="h-10 w-10 rounded-full border-4 border-gray-200 shadow-md"
-                      style={{
-                        backgroundColor: data.luckyColor.toLowerCase().replace(/\s+/g, ""),
-                      }}
-                    />
-                    <span className="font-semibold text-gray-900">{data.luckyColor}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className="border-0 shadow-md rounded-xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 border-b border-blue-100">
-                  <div className="flex items-center gap-2">
-                    <Users className="w-5 h-5 text-blue-600" />
-                    <CardTitle className="text-blue-900 text-base">Compatible Signs</CardTitle>
-                  </div>
-                </CardHeader>
-                <CardContent className="pt-4">
-                  <div className="flex flex-wrap gap-2">
-                    {data.compatibility.map((compatSign) => (
-                      <Badge
-                        key={compatSign}
-                        className={`bg-gradient-to-r ${getSignGradient(compatSign)} text-white text-xs`}
-                      >
-                        {compatSign}
-                      </Badge>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* Disclaimer */}
-            <div className="rounded-xl border-2 border-yellow-200 bg-yellow-50 p-4 text-sm text-gray-700">
-              <div className="flex gap-3">
-                <Sparkles className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
-                <div>
-                  <p className="font-semibold text-yellow-900 mb-1">Disclaimer</p>
-                  <p>
-                    This horoscope is for entertainment purposes only. For personalized astrological readings and remedies, consult a qualified Vedic astrologer.
-                  </p>
                 </div>
               </div>
-            </div>
+            ) : null}
+
+            {isLoading || !activeHoroscope ? (
+              <LoadingPanel />
+            ) : (
+              <>
+                <div className={`rounded-2xl bg-gradient-to-br ${getHoroscopeGradient(selectedSign)} p-6 text-white shadow-xl`}>
+                  <div className="mb-4 flex items-start justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <span className="text-5xl">{activeHoroscope.symbol}</span>
+                      <div>
+                        <h1 className="text-3xl font-bold">{selectedSign}</h1>
+                        <p className="mt-1 flex items-center gap-1 text-sm opacity-90">
+                          <Clock className="h-4 w-4" />
+                          {activeHoroscope.dateRange}
+                        </p>
+                        <p className="mt-1 text-xs opacity-80">Calculated for {formatDateLabel(activeHoroscope.date)}</p>
+                      </div>
+                    </div>
+                    <Badge className="bg-white px-4 py-2 font-semibold text-gray-900">{activeHoroscope.mood}</Badge>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <div className="rounded-xl bg-white/15 p-3 backdrop-blur-sm">
+                      <p className="text-[11px] uppercase tracking-wide opacity-75">Element</p>
+                      <div className="mt-2 flex items-center gap-2 text-sm font-semibold">
+                        {getElementIcon(activeHoroscope.element)}
+                        <span>{activeHoroscope.element}</span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-white/15 p-3 backdrop-blur-sm">
+                      <p className="text-[11px] uppercase tracking-wide opacity-75">Ruling Planet</p>
+                      <div className="mt-2 flex items-center gap-2 text-sm font-semibold">
+                        <Star className="h-4 w-4" />
+                        <span>{activeHoroscope.rulingPlanet}</span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-white/15 p-3 backdrop-blur-sm">
+                      <p className="text-[11px] uppercase tracking-wide opacity-75">Lucky Number</p>
+                      <div className="mt-2 flex items-center gap-2 text-sm font-semibold">
+                        <Sparkles className="h-4 w-4" />
+                        <span>{activeHoroscope.luckyNumber}</span>
+                      </div>
+                    </div>
+                    <div className="rounded-xl bg-white/15 p-3 backdrop-blur-sm">
+                      <p className="text-[11px] uppercase tracking-wide opacity-75">Lucky Color</p>
+                      <div className="mt-2 flex items-center gap-2 text-sm font-semibold">
+                        <Palette className="h-4 w-4" />
+                        <span>{activeHoroscope.luckyColor}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                  <Card className="border-0 shadow-md rounded-xl overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50 border-b border-orange-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Lightbulb className="h-5 w-5 text-orange-600" />
+                        <CardTitle className="text-base text-orange-900">Today's Guidance</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4 text-sm leading-6 text-gray-700">
+                      {activeHoroscope.horoscope}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-md rounded-xl overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 border-b border-green-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Target className="h-5 w-5 text-green-600" />
+                        <CardTitle className="text-base text-green-900">Focus</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4 text-sm leading-6 text-gray-700">
+                      {activeHoroscope.focus}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-md rounded-xl overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 border-b border-amber-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5 text-amber-600" />
+                        <CardTitle className="text-base text-amber-900">Avoid</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4 text-sm leading-6 text-gray-700">
+                      {activeHoroscope.avoid}
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-md rounded-xl overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 border-b border-purple-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="h-5 w-5 text-purple-600" />
+                        <CardTitle className="text-base text-purple-900">Remedy</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4 text-sm leading-6 text-gray-700">
+                      {activeHoroscope.remedy}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <Card className="border-0 shadow-md rounded-xl overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 border-b border-cyan-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-5 w-5 text-cyan-600" />
+                        <CardTitle className="text-base text-cyan-900">Panchang Influence</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="pt-4 text-sm text-gray-700">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-gray-500">Weekday</p>
+                          <p className="mt-1 font-semibold text-gray-900">{activeHoroscope.panchang.weekday}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-gray-500">Tithi</p>
+                          <p className="mt-1 font-semibold text-gray-900">{activeHoroscope.panchang.tithi}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-gray-500">Nakshatra</p>
+                          <p className="mt-1 font-semibold text-gray-900">{activeHoroscope.panchang.nakshatra}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-gray-500">Yoga</p>
+                          <p className="mt-1 font-semibold text-gray-900">{activeHoroscope.panchang.yoga}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-gray-500">Sunrise</p>
+                          <p className="mt-1 font-semibold text-gray-900">{activeHoroscope.panchang.sunrise}</p>
+                        </div>
+                        <div>
+                          <p className="text-[11px] uppercase tracking-wide text-gray-500">Sunset</p>
+                          <p className="mt-1 font-semibold text-gray-900">{activeHoroscope.panchang.sunset}</p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="border-0 shadow-md rounded-xl overflow-hidden">
+                    <CardHeader className="bg-gradient-to-r from-indigo-50 to-slate-50 border-b border-indigo-100 pb-3">
+                      <div className="flex items-center gap-2">
+                        <Heart className="h-5 w-5 text-indigo-600" />
+                        <CardTitle className="text-base text-indigo-900">Strengths & Challenges</CardTitle>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-4 text-sm text-gray-700">
+                      <div>
+                        <p className="font-semibold text-gray-900">Strengths</p>
+                        <p className="mt-1">{activeHoroscope.strength}</p>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-gray-900">Challenges</p>
+                        <p className="mt-1">{activeHoroscope.challenge}</p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card className="border-0 shadow-md rounded-xl overflow-hidden">
+                  <CardHeader className="bg-gradient-to-r from-rose-50 to-pink-50 border-b border-rose-100 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Users className="h-5 w-5 text-rose-600" />
+                      <CardTitle className="text-base text-rose-900">Compatible Signs</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-4">
+                    <div className="flex flex-wrap gap-2">
+                      {activeHoroscope.compatibility.map((compatSign) => (
+                        <Badge key={compatSign} className={`bg-gradient-to-r ${getHoroscopeGradient(compatSign)} px-3 py-1 text-xs text-white`}>
+                          {compatSign}
+                        </Badge>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <div className="rounded-xl border-2 border-yellow-200 bg-yellow-50 p-4 text-sm text-gray-700">
+                  <div className="flex gap-3">
+                    <AlertCircle className="mt-0.5 h-5 w-5 flex-shrink-0 text-yellow-600" />
+                    <div>
+                      <p className="mb-1 font-semibold text-yellow-900">Calculated daily horoscope</p>
+                      <p>
+                        This reading is generated from the current Panchang and sign profile. For fully personalized readings, use a birth chart with time and place.
+                      </p>
+                      <p className="mt-2 text-xs text-gray-500">
+                        Source: {activeHoroscope.source}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         </div>
       </div>
