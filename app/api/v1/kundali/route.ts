@@ -53,9 +53,15 @@ export async function POST(req: Request) {
     let geoData
     try {
       geoData = await geocodePlaceWithNominatim(place, referenceDate)
-    } catch (geocodeError) {
+    } catch (geocodeError: any) {
       console.error("[KUNDALI_GEOCODE]", geocodeError)
-      return errorResponse("Unable to resolve the birth place accurately. Please enter a more specific location.", 422)
+      // If the geocoder provided a user-facing message, return that; otherwise fallback to a generic friendly prompt
+      if (geocodeError && typeof geocodeError.userMessage === 'string') {
+        const status = typeof geocodeError.status === 'number' ? geocodeError.status : 422
+        return errorResponse(geocodeError.userMessage, status)
+      }
+
+      return errorResponse("Could not determine the birth place. Please provide a more specific place (city, state, country).", 422)
     }
     
     // Parse date

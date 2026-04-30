@@ -209,5 +209,7 @@ export async function geocodePlace(place: string): Promise<{
     }
   }
 
-  throw new Error(`Unable to geocode place: ${place}`)
+  const { UserError } = await import('../errors')
+  throw new UserError(`Unable to geocode place: ${place}`, `Could not find the location "${place}". Try specifying a city, state or country (for example: "Mumbai, India").`, 422)
 }
+

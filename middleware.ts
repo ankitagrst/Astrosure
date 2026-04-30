@@ -34,5 +34,6 @@ export const config = {
     '/api/v1/shop/:path*',
     '/api/v1/orders/:path*',
     '/api/v1/payments/:path*',
+    // NOTE: /api/v1/horoscope/daily is intentionally PUBLIC (free feature)
   ],
 }

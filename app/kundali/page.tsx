@@ -58,6 +58,8 @@ function KundaliContent() {
   const [isLoading, setIsLoading] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [placeValue, setPlaceValue] = useState("")
+  const [errorMessage, setErrorMessage] = useState<string | null>(null)
+
   
   // Pre-fill form from query params
   const [formData] = useState({
@@ -206,6 +208,12 @@ function KundaliContent() {
     }
   } | null>(null)
 
+  // Dosha/Yoga filters
+  const [doshaPresentOnly, setDoshaPresentOnly] = useState<boolean>(true)
+  const [doshaSeverityFilter, setDoshaSeverityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
+  const [yogaPresentOnly, setYogaPresentOnly] = useState<boolean>(true)
+  const [yogaStrengthFilter, setYogaStrengthFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
+
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     setIsLoading(true)
@@ -218,6 +226,7 @@ function KundaliContent() {
     const place = formData.get("place") as string
 
     try {
+      setErrorMessage(null)
       const res = await fetch("/api/v1/kundali", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -226,20 +235,25 @@ function KundaliContent() {
 
       const data = await res.json()
 
-      if (data.success) {
-        setChart({
-          ...data.data,
-          dob,
-          tob: tob || null,
-          place: data.data.place || place,
-          calculationMethod: data.data.calculationMethod,
-          mahakaalInfo: data.data.mahakaalInfo,
-          comprehensiveReport: data.data.comprehensiveReport,
-        })
-        setSelectedDivisionalChart("D1")
+      if (!res.ok || !data.success) {
+        const message = data?.error || data?.message || 'An unexpected error occurred. Please try again.'
+        setErrorMessage(message)
+        return
       }
+
+      setChart({
+        ...data.data,
+        dob,
+        tob: tob || null,
+        place: data.data.place || place,
+        calculationMethod: data.data.calculationMethod,
+        mahakaalInfo: data.data.mahakaalInfo,
+        comprehensiveReport: data.data.comprehensiveReport,
+      })
+      setSelectedDivisionalChart("D1")
     } catch (err) {
       console.error(err)
+      setErrorMessage('Network error. Please check your connection and try again.')
     } finally {
       setIsLoading(false)
     }
@@ -300,6 +314,13 @@ function KundaliContent() {
                   <CardDescription>{t.formDescription}</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {errorMessage && (
+                    <div className="mb-4">
+                      <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
+                        {errorMessage}
+                      </div>
+                    </div>
+                  )}
                   <form onSubmit={onSubmit} className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
@@ -845,25 +866,81 @@ function KundaliContent() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {chart.comprehensiveReport.doshas.map((dosha, index) => (
-                            <div key={index} className="rounded-lg border bg-orange-50 p-3">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-semibold text-gray-900 text-sm">{dosha.name}</h4>
-                                <span className={`rounded px-2 py-0.5 text-xs font-bold ${
-                                  dosha.severity === 'high' ? 'bg-red-100 text-red-700' :
-                                  dosha.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-green-100 text-green-700'
-                                }`}>
-                                  {dosha.severity.toUpperCase()}
-                                </span>
-                              </div>
-                              <p className={`mt-1 text-xs font-semibold ${dosha.present ? 'text-red-700' : 'text-green-700'}`}>
-                                {dosha.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
-                              </p>
-                              {dosha.type && <p className="mt-0.5 text-[11px] text-gray-500">{language === 'hi' ? 'प्रकार' : 'Type'}: {dosha.type}</p>}
-                              <p className="mt-1 text-xs text-gray-600">{dosha.description}</p>
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <div className="flex items-center gap-2">
+                              <label className="inline-flex items-center gap-2 text-sm">
+                                <input type="checkbox" checked={doshaPresentOnly} onChange={(e) => setDoshaPresentOnly(e.target.checked)} className="h-4 w-4" />
+                                <span className="text-sm text-gray-700">{language === 'hi' ? 'केवल मौजूद दोष' : 'Only show present doshas'}</span>
+                              </label>
                             </div>
-                          ))}
+                            <div className="flex items-center gap-2">
+                              <label className="text-sm text-gray-600 mr-2">{language === 'hi' ? 'प्राथमिकता' : 'Priority'}:</label>
+                              <select value={doshaSeverityFilter} onChange={(e) => setDoshaSeverityFilter(e.target.value as any)} className="rounded-md border px-2 py-1 text-sm">
+                                <option value="all">{language === 'hi' ? 'सभी' : 'All'}</option>
+                                <option value="high">{language === 'hi' ? 'उच्च' : 'High'}</option>
+                                <option value="medium">{language === 'hi' ? 'मध्यम' : 'Medium'}</option>
+                                <option value="low">{language === 'hi' ? 'कम' : 'Low'}</option>
+                              </select>
+                            </div>
+                          </div>
+
+                          {/* Render grouped by severity when 'all' selected, otherwise filtered list */}
+                          {doshaSeverityFilter === 'all' ? (
+                            ['high', 'medium', 'low'].map((level) => {
+                              const group = chart.comprehensiveReport!.doshas.filter((d) => d.severity === (level as 'high'|'medium'|'low'))
+                                .filter((d) => !doshaPresentOnly || d.present)
+                              if (group.length === 0) return null
+                              return (
+                                <div key={level}>
+                                  <h5 className="mb-2 text-xs font-semibold uppercase text-gray-500">{level === 'high' ? (language === 'hi' ? 'उच्च' : 'High') : level === 'medium' ? (language === 'hi' ? 'मध्यम' : 'Medium') : (language === 'hi' ? 'कम' : 'Low')}</h5>
+                                  <div className="grid gap-2">
+                                    {group.map((dosha, idx) => (
+                                      <div key={idx} className="rounded-lg border bg-orange-50 p-3">
+                                        <div className="flex items-center justify-between">
+                                          <h4 className="font-semibold text-gray-900 text-sm">{dosha.name}</h4>
+                                          <span className={`rounded px-2 py-0.5 text-xs font-bold ${
+                                            dosha.severity === 'high' ? 'bg-red-100 text-red-700' :
+                                            dosha.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-green-100 text-green-700'
+                                          }`}>
+                                            {dosha.severity.toUpperCase()}
+                                          </span>
+                                        </div>
+                                        <p className={`mt-1 text-xs font-semibold ${dosha.present ? 'text-red-700' : 'text-green-700'}`}>
+                                          {dosha.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
+                                        </p>
+                                        {dosha.type && <p className="mt-0.5 text-[11px] text-gray-500">{language === 'hi' ? 'प्रकार' : 'Type'}: {dosha.type}</p>}
+                                        <p className="mt-1 text-xs text-gray-600">{dosha.description}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            })
+                          ) : (
+                            chart.comprehensiveReport.doshas
+                              .filter((d) => d.severity === doshaSeverityFilter)
+                              .filter((d) => !doshaPresentOnly || d.present)
+                              .map((dosha, index) => (
+                                <div key={index} className="rounded-lg border bg-orange-50 p-3">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-semibold text-gray-900 text-sm">{dosha.name}</h4>
+                                    <span className={`rounded px-2 py-0.5 text-xs font-bold ${
+                                      dosha.severity === 'high' ? 'bg-red-100 text-red-700' :
+                                      dosha.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-green-100 text-green-700'
+                                    }`}>
+                                      {dosha.severity.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <p className={`mt-1 text-xs font-semibold ${dosha.present ? 'text-red-700' : 'text-green-700'}`}>
+                                    {dosha.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
+                                  </p>
+                                  {dosha.type && <p className="mt-0.5 text-[11px] text-gray-500">{language === 'hi' ? 'प्रकार' : 'Type'}: {dosha.type}</p>}
+                                  <p className="mt-1 text-xs text-gray-600">{dosha.description}</p>
+                                </div>
+                              ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>
@@ -876,24 +953,76 @@ function KundaliContent() {
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
-                          {chart.comprehensiveReport.yogas.map((yoga, index) => (
-                            <div key={index} className="rounded-lg border bg-blue-50 p-3">
-                              <div className="flex items-center justify-between">
-                                <h4 className="font-semibold text-gray-900 text-sm">{yoga.name}</h4>
-                                <span className={`rounded px-2 py-0.5 text-xs font-bold ${
-                                  yoga.strength === 'high' ? 'bg-green-100 text-green-700' :
-                                  yoga.strength === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                  'bg-gray-100 text-gray-700'
-                                }`}>
-                                  {yoga.strength.toUpperCase()}
-                                </span>
-                              </div>
-                              <p className={`mt-1 text-xs font-semibold ${yoga.present ? 'text-green-700' : 'text-gray-600'}`}>
-                                {yoga.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
-                              </p>
-                              <p className="mt-1 text-xs text-gray-600">{yoga.description}</p>
+                          <div className="flex items-center justify-between gap-3 mb-3">
+                            <label className="inline-flex items-center gap-2 text-sm">
+                              <input type="checkbox" checked={yogaPresentOnly} onChange={(e) => setYogaPresentOnly(e.target.checked)} className="h-4 w-4" />
+                              <span className="text-sm text-gray-700">{language === 'hi' ? 'केवल मौजूद योग' : 'Only show present yogas'}</span>
+                            </label>
+                            <div className="flex items-center gap-2">
+                              <label className="text-sm text-gray-600 mr-2">{language === 'hi' ? 'शक्ति' : 'Strength'}:</label>
+                              <select value={yogaStrengthFilter} onChange={(e) => setYogaStrengthFilter(e.target.value as any)} className="rounded-md border px-2 py-1 text-sm">
+                                <option value="all">{language === 'hi' ? 'सभी' : 'All'}</option>
+                                <option value="high">{language === 'hi' ? 'उच्च' : 'High'}</option>
+                                <option value="medium">{language === 'hi' ? 'मध्यम' : 'Medium'}</option>
+                                <option value="low">{language === 'hi' ? 'कम' : 'Low'}</option>
+                              </select>
                             </div>
-                          ))}
+                          </div>
+
+                          {yogaStrengthFilter === 'all' ? (
+                            ['high', 'medium', 'low'].map((level) => {
+                              const group = chart.comprehensiveReport!.yogas.filter((y) => y.strength === (level as 'high'|'medium'|'low'))
+                                .filter((y) => !yogaPresentOnly || y.present)
+                              if (group.length === 0) return null
+                              return (
+                                <div key={level}>
+                                  <h5 className="mb-2 text-xs font-semibold uppercase text-gray-500">{level === 'high' ? (language === 'hi' ? 'उच्च' : 'High') : level === 'medium' ? (language === 'hi' ? 'मध्यम' : 'Medium') : (language === 'hi' ? 'कम' : 'Low')}</h5>
+                                  <div className="grid gap-2">
+                                    {group.map((yoga, idx) => (
+                                      <div key={idx} className="rounded-lg border bg-blue-50 p-3">
+                                        <div className="flex items-center justify-between">
+                                          <h4 className="font-semibold text-gray-900 text-sm">{yoga.name}</h4>
+                                          <span className={`rounded px-2 py-0.5 text-xs font-bold ${
+                                            yoga.strength === 'high' ? 'bg-green-100 text-green-700' :
+                                            yoga.strength === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                            'bg-gray-100 text-gray-700'
+                                          }`}>
+                                            {yoga.strength.toUpperCase()}
+                                          </span>
+                                        </div>
+                                        <p className={`mt-1 text-xs font-semibold ${yoga.present ? 'text-green-700' : 'text-gray-600'}`}>
+                                          {yoga.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
+                                        </p>
+                                        <p className="mt-1 text-xs text-gray-600">{yoga.description}</p>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )
+                            })
+                          ) : (
+                            chart.comprehensiveReport.yogas
+                              .filter((y) => y.strength === yogaStrengthFilter)
+                              .filter((y) => !yogaPresentOnly || y.present)
+                              .map((yoga, index) => (
+                                <div key={index} className="rounded-lg border bg-blue-50 p-3">
+                                  <div className="flex items-center justify-between">
+                                    <h4 className="font-semibold text-gray-900 text-sm">{yoga.name}</h4>
+                                    <span className={`rounded px-2 py-0.5 text-xs font-bold ${
+                                      yoga.strength === 'high' ? 'bg-green-100 text-green-700' :
+                                      yoga.strength === 'medium' ? 'bg-yellow-100 text-yellow-700' :
+                                      'bg-gray-100 text-gray-700'
+                                    }`}>
+                                      {yoga.strength.toUpperCase()}
+                                    </span>
+                                  </div>
+                                  <p className={`mt-1 text-xs font-semibold ${yoga.present ? 'text-green-700' : 'text-gray-600'}`}>
+                                    {yoga.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
+                                  </p>
+                                  <p className="mt-1 text-xs text-gray-600">{yoga.description}</p>
+                                </div>
+                              ))
+                          )}
                         </div>
                       </CardContent>
                     </Card>

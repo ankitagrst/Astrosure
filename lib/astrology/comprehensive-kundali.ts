@@ -131,6 +131,18 @@ export interface Yoga {
   description: string
 }
 
+export interface PlanetaryStrengthening {
+  planet: string
+  practicalStrengthening: string[]
+  traditionalStrengthening: string[]
+}
+
+export interface CalculationModuleStatus {
+  module: string
+  status: 'calculated' | 'partial' | 'pending'
+  note: string
+}
+
 export interface DashaPeriod {
   planet: string
   startDate: string
@@ -196,6 +208,8 @@ export interface ComprehensiveKundaliReport {
   divisionalCharts: Record<DivisionalChartKey, DivisionalChartData>
   doshas: Dosha[]
   yogas: Yoga[]
+  planetaryStrengthening: PlanetaryStrengthening[]
+  calculationModules: CalculationModuleStatus[]
   dashas: DashaPeriod[]
   predictions: Prediction[]
   characterTraits: CharacterTrait[]
@@ -260,6 +274,8 @@ export async function generateComprehensiveReport(
   
   const doshas = calculateDoshas(planets, houses, ascendant, latitude, longitude, timezone, language)
   const yogas = calculateYogas(planets, ascendant, language)
+  const planetaryStrengthening = generatePlanetaryStrengthening(language)
+  const calculationModules = generateCalculationModulesStatus(language)
   const dashas = calculateDasha(planets, birthDate, language)
   const predictions = generatePredictions(planets, houses, ascendant, language)
   const characterTraits = analyzeCharacter(planets, houses, ascendant, language)
@@ -285,6 +301,8 @@ export async function generateComprehensiveReport(
     divisionalCharts,
     doshas,
     yogas,
+    planetaryStrengthening,
+    calculationModules,
     dashas,
     predictions,
     characterTraits,
@@ -752,6 +770,125 @@ function calculateDoshas(
   return localizeDoshas(doshas, language)
 }
 
+function generatePlanetaryStrengthening(language: Language = 'en'): PlanetaryStrengthening[] {
+  const label = (en: string, hi: string) => (language === 'hi' ? hi : en)
+
+  return [
+    {
+      planet: label('Sun', 'सूर्य'),
+      practicalStrengthening: [
+        label('Leadership in daily decisions', 'दैनिक निर्णयों में नेतृत्व'),
+        label('Punctuality and accountability', 'समयपालन और जवाबदेही'),
+        label('Healing relationship with father/authority', 'पिता/अथॉरिटी से संबंध सुधार'),
+      ],
+      traditionalStrengthening: [
+        label('Surya mantra', 'सूर्य मंत्र'),
+        label('Sunday discipline and seva', 'रविवार अनुशासन और सेवा'),
+        label('Offer water to rising Sun', 'उगते सूर्य को जल अर्पण'),
+      ],
+    },
+    {
+      planet: label('Moon', 'चंद्र'),
+      practicalStrengthening: [
+        label('Sleep and emotional regulation', 'नींद और भावनात्मक संतुलन'),
+        label('Family bonding and hydration', 'परिवारिक जुड़ाव और जल संतुलन'),
+        label('Journaling and mood tracking', 'डायरी और भावनात्मक ट्रैकिंग'),
+      ],
+      traditionalStrengthening: [
+        label('Chandra mantra', 'चंद्र मंत्र'),
+        label('Monday fasting/charity', 'सोमवार व्रत/दान'),
+        label('Respect and care toward mother', 'माता का सम्मान और सेवा'),
+      ],
+    },
+    {
+      planet: label('Mars', 'मंगल'),
+      practicalStrengthening: [
+        label('Regular exercise and discipline', 'नियमित व्यायाम और अनुशासन'),
+        label('Technical or engineering skill building', 'तकनीकी/इंजीनियरिंग कौशल विकास'),
+        label('Anger management with courage control', 'क्रोध नियंत्रण के साथ साहस'),
+      ],
+      traditionalStrengthening: [
+        label('Hanuman worship', 'हनुमान उपासना'),
+        label('Tuesday charity', 'मंगलवार दान'),
+        label('Avoid aggressive speech and conflict', 'आक्रामक वाणी और विवाद से बचें'),
+      ],
+    },
+    {
+      planet: label('Mercury', 'बुध'),
+      practicalStrengthening: [
+        label('Study, writing, accounting', 'अध्ययन, लेखन, लेखा'),
+        label('Trade and communication excellence', 'व्यापार और संचार में निपुणता'),
+        label('Documentation and analytical thinking', 'डॉक्यूमेंटेशन और विश्लेषण क्षमता'),
+      ],
+      traditionalStrengthening: [
+        label('Budh mantra', 'बुध मंत्र'),
+        label('Wednesday charity', 'बुधवार दान'),
+        label('Use of green items traditionally', 'परंपरागत हरे वस्त्र/वस्तुओं का प्रयोग'),
+      ],
+    },
+    {
+      planet: label('Jupiter', 'बृहस्पति'),
+      practicalStrengthening: [
+        label('Teaching and mentoring', 'शिक्षण और मेंटरिंग'),
+        label('Ethical decision making', 'नैतिक निर्णय क्षमता'),
+        label('Scripture and higher learning', 'शास्त्र और उच्च अध्ययन'),
+      ],
+      traditionalStrengthening: [
+        label('Guru mantra', 'गुरु मंत्र'),
+        label('Thursday charity', 'गुरुवार दान'),
+        label('Respect for teachers and elders', 'गुरुजनों का सम्मान'),
+      ],
+    },
+    {
+      planet: label('Venus', 'शुक्र'),
+      practicalStrengthening: [
+        label('Art and aesthetics', 'कला और सौंदर्य'),
+        label('Relationship maturity and diplomacy', 'संबंध परिपक्वता और कूटनीति'),
+        label('Cleanliness and lifestyle refinement', 'स्वच्छता और जीवनशैली सुधार'),
+      ],
+      traditionalStrengthening: [
+        label('Shukra mantra', 'शुक्र मंत्र'),
+        label('Friday charity', 'शुक्रवार दान'),
+        label('Respect women and partners', 'महिलाओं/साथी का सम्मान'),
+      ],
+    },
+    {
+      planet: label('Saturn', 'शनि'),
+      practicalStrengthening: [
+        label('Hard work and routine', 'कठोर परिश्रम और दिनचर्या'),
+        label('Patience and lawful conduct', 'धैर्य और नियमपालन'),
+        label('Service mindset with responsibility', 'सेवा भाव और जिम्मेदारी'),
+      ],
+      traditionalStrengthening: [
+        label('Shani mantra', 'शनि मंत्र'),
+        label('Saturday charity/service', 'शनिवार दान/सेवा'),
+        label('Support workers and the poor', 'श्रमिकों और वंचितों की सहायता'),
+      ],
+    },
+  ]
+}
+
+function generateCalculationModulesStatus(language: Language = 'en'): CalculationModuleStatus[] {
+  const text = (en: string, hi: string) => (language === 'hi' ? hi : en)
+
+  return [
+    { module: text('Main details', 'मुख्य विवरण'), status: 'calculated', note: text('DOB/TOB/place/coordinates/timezone computed.', 'जन्म विवरण, स्थान, निर्देशांक और टाइमज़ोन गणना में शामिल हैं।') },
+    { module: text('Planetary positions', 'ग्रह स्थिति'), status: 'calculated', note: text('Sidereal longitudes with house, sign, nakshatra, retrograde status.', 'निरायण दीर्घांश, भाव, राशि, नक्षत्र और वक्री स्थिति सहित।') },
+    { module: text('Lagna and Chandra chart', 'लग्न एवं चन्द्र कुण्डली'), status: 'calculated', note: text('Ascendant and Moon-based analysis is available.', 'लग्न और चंद्र-आधारित विश्लेषण उपलब्ध है।') },
+    { module: text('Shodashvarga charts', 'शोडषवर्ग कुण्डलियाँ'), status: 'partial', note: text('D1/D2/D3/D7/D9/D10/D12/D16/D60 currently computed.', 'अभी D1/D2/D3/D7/D9/D10/D12/D16/D60 गणना में हैं।') },
+    { module: text('Vimshottari dasha', 'विंशोत्तरी दशा'), status: 'calculated', note: text('Mahadasha timeline and current dasha are computed.', 'महादशा टाइमलाइन और वर्तमान दशा गणना की जाती है।') },
+    { module: text('Chara dasha', 'चरदशा'), status: 'pending', note: text('Not yet implemented in current engine.', 'वर्तमान इंजन में अभी लागू नहीं है।') },
+    { module: text('Yogini dasha', 'योगिनी दशा'), status: 'pending', note: text('Not yet implemented in current engine.', 'वर्तमान इंजन में अभी लागू नहीं है।') },
+    { module: text('Lal Kitab dasha and worksheets', 'लाल किताब दशा व वर्कशीट'), status: 'pending', note: text('Dedicated Lal Kitab calculation layer is pending.', 'अलग लाल किताब गणना लेयर अभी लंबित है।') },
+    { module: text('Ashtakavarga / Prastara Ashtakavarga', 'अष्टकवर्ग / प्रस्तरअष्टकवर्ग'), status: 'pending', note: text('Ashtakavarga bindu matrix not yet computed.', 'अष्टकवर्ग बिंदु मैट्रिक्स अभी गणना में नहीं है।') },
+    { module: text('Bhavmadhya and KP cusp aspects', 'भावमध्य और केपी संधि दृष्टि'), status: 'pending', note: text('KP cusp and bhava-madhya aspect engine pending.', 'केपी संधि और भावमध्य दृष्टि इंजन लंबित है।') },
+    { module: text('Western aspects', 'ग्रह दृष्टि (पाश्चात्य)'), status: 'partial', note: text('Limited 7th/aspect relationships are used in yoga detection.', 'योग पहचान में सीमित दृष्टि-संबंध उपयोग हो रहे हैं।') },
+    { module: text('Shadbala and Bhavabala', 'षडबल एवं भावबल'), status: 'pending', note: text('Numerical bala computation module is pending.', 'संख्यात्मक बल गणना मॉड्यूल अभी लंबित है।') },
+    { module: text('Sarvatobhadra chakra', 'सर्वतोभद्र चक्र'), status: 'pending', note: text('Dedicated Sarvatobhadra logic is pending.', 'सर्वतोभद्र चक्र का अलग लॉजिक अभी लंबित है।') },
+    { module: text('Detailed PDF report', 'विस्तृत गणना रिपोर्ट PDF'), status: 'partial', note: text('PDF is available; advanced modules above are required for full parity.', 'PDF उपलब्ध है; पूर्ण समानता हेतु ऊपर के advanced modules चाहिए।') },
+  ]
+}
+
 function calculateYogas(planets: PlanetPosition[], ascendant: PlanetPosition, language: Language = 'en'): Yoga[] {
   const yogas: Yoga[] = []
 
@@ -761,6 +898,12 @@ function calculateYogas(planets: PlanetPosition[], ascendant: PlanetPosition, la
     return Math.min(diff, 360 - diff)
   }
   const isConjunct = (a?: PlanetPosition, b?: PlanetPosition, orb = 10) => !!a && !!b && conjunctionOrb(a.longitude, b.longitude) <= orb
+  const isSeventhAspect = (a?: PlanetPosition, b?: PlanetPosition, orb = 8) => {
+    if (!a || !b) return false
+    const diff = Math.abs(((a.longitude - b.longitude + 540) % 360) - 180)
+    return diff <= orb
+  }
+  const connected = (a?: PlanetPosition, b?: PlanetPosition, orb = 10) => isConjunct(a, b, orb) || isSeventhAspect(a, b, orb)
 
   const houseLordBySign: Record<number, string> = {
     0: 'Mars',
@@ -777,11 +920,76 @@ function calculateYogas(planets: PlanetPosition[], ascendant: PlanetPosition, la
     11: 'Jupiter',
   }
 
+  const OWN_SIGNS: Record<string, number[]> = {
+    Sun: [4],
+    Moon: [3],
+    Mars: [0, 7],
+    Mercury: [2, 5],
+    Jupiter: [8, 11],
+    Venus: [1, 6],
+    Saturn: [9, 10],
+  }
+
+  const EXALTATION_SIGNS: Record<string, number> = {
+    Sun: 0,
+    Moon: 1,
+    Mars: 9,
+    Mercury: 5,
+    Jupiter: 3,
+    Venus: 11,
+    Saturn: 6,
+  }
+
+  const DEBILITATION_SIGNS: Record<string, number> = {
+    Sun: 6,
+    Moon: 7,
+    Mars: 3,
+    Mercury: 11,
+    Jupiter: 9,
+    Venus: 5,
+    Saturn: 0,
+  }
+
   const getHouseSign = (houseNumber: number) => (ascendant.sign + houseNumber - 1) % 12
+  const houseLord = (houseNumber: number) => houseLordBySign[getHouseSign(houseNumber)]
+  const byName = (name: string) => findPlanet(name)
+  const isKendra = (house: number) => [1, 4, 7, 10].includes(house)
+  const isTrikona = (house: number) => [1, 5, 9].includes(house)
+  const inHouseFrom = (baseHouse: number, targetHouse: number, offset: number) => ((baseHouse + offset - 1) % 12) + 1 === targetHouse
+  const isStrongPlanet = (planet?: PlanetPosition) => {
+    if (!planet) return false
+    const ownSigns = OWN_SIGNS[planet.planet] ?? []
+    const exalted = EXALTATION_SIGNS[planet.planet] === planet.sign
+    const own = ownSigns.includes(planet.sign)
+    const angleOrTrine = isKendra(planet.house) || isTrikona(planet.house)
+    return exalted || own || angleOrTrine
+  }
+
+  const planetsExcludingNodes = planets.filter((p) => !['Rahu', 'Ketu'].includes(p.planet))
+
+  const addYoga = (name: string, present: boolean, highText: string, lowText: string, highStrength: 'high' | 'medium' = 'medium') => {
+    yogas.push({
+      name,
+      present,
+      strength: present ? highStrength : 'low',
+      description: present ? highText : lowText,
+    })
+  }
+
+  const lagnaLord = byName(houseLord(1))
+  const lord2 = byName(houseLord(2))
+  const lord4 = byName(houseLord(4))
+  const lord5 = byName(houseLord(5))
+  const lord6 = byName(houseLord(6))
+  const lord8 = byName(houseLord(8))
+  const lord9 = byName(houseLord(9))
+  const lord10 = byName(houseLord(10))
+  const lord11 = byName(houseLord(11))
+
   const trinalHouses = [1, 5, 9]
   const kendraHouses = [1, 4, 7, 10]
-  const trinalLords = trinalHouses.map((h) => houseLordBySign[getHouseSign(h)])
-  const kendraLords = kendraHouses.map((h) => houseLordBySign[getHouseSign(h)])
+  const trinalLords = trinalHouses.map((h) => houseLord(h))
+  const kendraLords = kendraHouses.map((h) => houseLord(h))
 
   const rajYogaPairs: Array<[string, string]> = []
   for (const t of trinalLords) {
@@ -791,49 +999,231 @@ function calculateYogas(planets: PlanetPosition[], ascendant: PlanetPosition, la
   }
 
   const rajYogaPresent = rajYogaPairs.some(([a, b]) => {
-    const pa = findPlanet(a)
-    const pb = findPlanet(b)
-    return isConjunct(pa, pb, 10) || (!!pa && !!pb && pa.house === pb.house)
+    const pa = byName(a)
+    const pb = byName(b)
+    return connected(pa, pb, 10) || (!!pa && !!pb && pa.house === pb.house)
   })
 
-  yogas.push({
-    name: 'Rajyog',
-    present: rajYogaPresent,
-    strength: rajYogaPresent ? 'high' : 'low',
-    description: rajYogaPresent
-      ? 'Kendra and trikon lords show sambandha/conjunction, indicating Rajyog potential.'
-      : 'No strong Rajyog sambandha detected from kendra-trikon lords.',
-  })
-
-  const moon = findPlanet('Moon')
-  const jupiter = findPlanet('Jupiter')
-  const gajaKesariPresent = !!moon && !!jupiter && (
-    moon.house === jupiter.house ||
-    ((moon.house + 3 - 1) % 12) + 1 === jupiter.house ||
-    ((moon.house + 6 - 1) % 12) + 1 === jupiter.house ||
-    ((moon.house + 9 - 1) % 12) + 1 === jupiter.house
+  addYoga(
+    'Rajyog',
+    rajYogaPresent,
+    'Kendra and trikon lords show sambandha/conjunction, indicating Rajyog potential.',
+    'No strong Rajyog sambandha detected from kendra-trikon lords.',
+    'high'
   )
 
-  yogas.push({
-    name: 'Gaja Kesari Yoga',
-    present: gajaKesariPresent,
-    strength: gajaKesariPresent ? 'medium' : 'low',
-    description: gajaKesariPresent
-      ? 'Moon-Jupiter kendra relationship indicates Gaja Kesari support.'
-      : 'No strong Gaja Kesari pattern detected.',
-  })
+  const dharmaKarmaPresent = connected(lord9, lord10, 10) || (!!lord9 && !!lord10 && lord9.house === lord10.house)
+  addYoga(
+    'Dharma-Karmadhipati Yoga',
+    dharmaKarmaPresent,
+    '9th lord and 10th lord are strongly connected, supporting karmic career rise and reputation.',
+    'No strong 9th-10th lord connection found for Dharma-Karmadhipati pattern.'
+  )
 
-  const sun = findPlanet('Sun')
-  const mercury = findPlanet('Mercury')
-  const budhadityaPresent = isConjunct(sun, mercury, 10)
-  yogas.push({
-    name: 'Budhaditya Yoga',
-    present: budhadityaPresent,
-    strength: budhadityaPresent ? 'medium' : 'low',
-    description: budhadityaPresent
-      ? 'Sun and Mercury conjunction indicates Budhaditya Yoga.'
-      : 'No Budhaditya conjunction detected.',
+  const moon = byName('Moon')
+  const jupiter = byName('Jupiter')
+  const gajaKesariPresent = !!moon && !!jupiter && (
+    moon.house === jupiter.house ||
+    inHouseFrom(moon.house, jupiter.house, 4) ||
+    inHouseFrom(moon.house, jupiter.house, 7) ||
+    inHouseFrom(moon.house, jupiter.house, 10)
+  )
+  addYoga(
+    'Gaja Kesari Yoga',
+    gajaKesariPresent,
+    'Moon-Jupiter kendra relationship indicates Gaja Kesari support.',
+    'No strong Gaja Kesari pattern detected.'
+  )
+
+  const dhanCandidates = [lord2, lord5, lord9, lord11].filter(Boolean) as PlanetPosition[]
+  const dhanYogaPresent = dhanCandidates.some((p, i) => dhanCandidates.slice(i + 1).some((q) => connected(p, q, 10) || p.house === q.house))
+  addYoga(
+    'Dhan Yoga',
+    dhanYogaPresent,
+    '2nd/5th/9th/11th lords are connected, supporting wealth accumulation and gains.',
+    'No strong wealth-lord linkage found for Dhan Yoga.'
+  )
+
+  const lakshmiYogaPresent = !!lord9 && isStrongPlanet(lord9) && (isKendra(lord9.house) || isTrikona(lord9.house)) && isStrongPlanet(lagnaLord)
+  addYoga(
+    'Lakshmi Yoga',
+    lakshmiYogaPresent,
+    'Strong 9th lord and Lagna support indicate Lakshmi Yoga for prosperity and grace.',
+    'Lakshmi Yoga pattern is weak because 9th lord/Lagna strength is not sufficient.'
+  )
+
+  const dusthana = [6, 8, 12]
+  const vipareetaPresent = [lord6, lord8, byName(houseLord(12))].some((p) => !!p && dusthana.includes(p.house))
+  addYoga(
+    'Vipareeta Raja Yoga',
+    vipareetaPresent,
+    'Dusthana lord placement in another dusthana indicates Vipareeta Raja Yoga potential.',
+    'No major dusthana-lord reversal found for Vipareeta Raja Yoga.'
+  )
+
+  const debilitated = planetsExcludingNodes.filter((p) => DEBILITATION_SIGNS[p.planet] === p.sign)
+  const neechaBhangaPresent = debilitated.some((p) => {
+    const dispositorName = houseLordBySign[p.sign]
+    const dispositor = byName(dispositorName)
+    return !!dispositor && isKendra(dispositor.house)
   })
+  addYoga(
+    'Neecha Bhanga Raja Yoga',
+    neechaBhangaPresent,
+    'Debilitation cancellation pattern is present through strong correction factors.',
+    'No clear debilitation-cancellation pattern detected.'
+  )
+
+  const sun = byName('Sun')
+  const mercury = byName('Mercury')
+  const mars = byName('Mars')
+  const venus = byName('Venus')
+  const saturn = byName('Saturn')
+
+  const ruchaka = !!mars && isKendra(mars.house) && ([0, 7].includes(mars.sign) || EXALTATION_SIGNS.Mars === mars.sign)
+  const bhadra = !!mercury && isKendra(mercury.house) && ([2, 5].includes(mercury.sign) || EXALTATION_SIGNS.Mercury === mercury.sign)
+  const hamsa = !!jupiter && isKendra(jupiter.house) && ([8, 11].includes(jupiter.sign) || EXALTATION_SIGNS.Jupiter === jupiter.sign)
+  const malavya = !!venus && isKendra(venus.house) && ([1, 6].includes(venus.sign) || EXALTATION_SIGNS.Venus === venus.sign)
+  const shasha = !!saturn && isKendra(saturn.house) && ([9, 10].includes(saturn.sign) || EXALTATION_SIGNS.Saturn === saturn.sign)
+  const panchaMahapurusha = ruchaka || bhadra || hamsa || malavya || shasha
+
+  addYoga(
+    'Panch Mahapurusha Yoga',
+    panchaMahapurusha,
+    'One or more Mahapurusha combinations are present in Kendra with own/exalted dignity.',
+    'No complete Panch Mahapurusha combination found.'
+  )
+  addYoga('Ruchaka Yoga', ruchaka, 'Mars forms Ruchaka pattern in Kendra with own/exalted dignity.', 'Ruchaka Yoga not formed.')
+  addYoga('Bhadra Yoga', bhadra, 'Mercury forms Bhadra pattern in Kendra with own/exalted dignity.', 'Bhadra Yoga not formed.')
+  addYoga('Hamsa Yoga', hamsa, 'Jupiter forms Hamsa pattern in Kendra with own/exalted dignity.', 'Hamsa Yoga not formed.')
+  addYoga('Malavya Yoga', malavya, 'Venus forms Malavya pattern in Kendra with own/exalted dignity.', 'Malavya Yoga not formed.')
+  addYoga('Shasha Yoga', shasha, 'Saturn forms Shasha pattern in Kendra with own/exalted dignity.', 'Shasha Yoga not formed.')
+
+  const budhadityaPresent = isConjunct(sun, mercury, 10)
+  addYoga(
+    'Budhaditya Yoga',
+    budhadityaPresent,
+    'Sun and Mercury conjunction indicates Budhaditya Yoga.',
+    'No Budhaditya conjunction detected.'
+  )
+
+  const chandraMangal = connected(moon, mars, 10)
+  addYoga(
+    'Chandra-Mangal Yoga',
+    chandraMangal,
+    'Moon and Mars are connected, supporting Chandra-Mangal business drive.',
+    'Moon-Mars connection is weak; Chandra-Mangal is not prominent.'
+  )
+
+  const moonTenth = moon ? ((moon.house + 9) % 12) + 1 : 0
+  const benefics = ['Jupiter', 'Venus', 'Mercury']
+  const amalaFromLagna = planetsExcludingNodes.some((p) => benefics.includes(p.planet) && p.house === 10)
+  const amalaFromMoon = moon ? planetsExcludingNodes.some((p) => benefics.includes(p.planet) && p.house === moonTenth) : false
+  addYoga(
+    'Amala Yoga',
+    amalaFromLagna || amalaFromMoon,
+    'A benefic occupies 10th from Lagna/Moon, indicating Amala reputation support.',
+    'No benefic found in 10th from Lagna/Moon for Amala Yoga.'
+  )
+
+  const adhiYoga = !!moon && planetsExcludingNodes.some((p) => benefics.includes(p.planet) && [6, 7, 8].includes(((p.house - moon.house + 12) % 12) + 1))
+  addYoga(
+    'Adhi Yoga',
+    adhiYoga,
+    'Benefics in 6th/7th/8th from Moon indicate Adhi Yoga support.',
+    'No clear Adhi Yoga arrangement from Moon found.'
+  )
+
+  const vesi = !!sun && planetsExcludingNodes.some((p) => p.planet !== 'Moon' && p.house === ((sun.house % 12) + 1))
+  const vasi = !!sun && planetsExcludingNodes.some((p) => p.planet !== 'Moon' && p.house === ((sun.house + 10) % 12) + 1)
+  addYoga('Vesi Yoga', vesi, 'Planetary occupation 2nd from Sun forms Vesi Yoga.', 'No Vesi placement found from Sun.')
+  addYoga('Vasi Yoga', vasi, 'Planetary occupation 12th from Sun forms Vasi Yoga.', 'No Vasi placement found from Sun.')
+  addYoga('Ubhayachari Yoga', vesi && vasi, 'Both 2nd and 12th from Sun are occupied, forming Ubhayachari Yoga.', 'Ubhayachari pattern not formed around Sun.')
+
+  const signOwner = (sign: number) => houseLordBySign[sign]
+  const parivartana = planetsExcludingNodes.some((a) => {
+    const ownerOfASign = signOwner(a.sign)
+    const b = byName(ownerOfASign)
+    if (!b) return false
+    return signOwner(b.sign) === a.planet && b.planet !== a.planet
+  })
+  addYoga(
+    'Parivartana Yoga',
+    parivartana,
+    'Mutual sign exchange pattern detected between house/sign lords.',
+    'No strong mutual sign-exchange pattern found.'
+  )
+
+  const saraswati = !!jupiter && !!venus && !!mercury && [jupiter, venus, mercury].every((p) => isStrongPlanet(p) && (isKendra(p.house) || isTrikona(p.house) || p.house === 2))
+  addYoga(
+    'Saraswati Yoga',
+    saraswati,
+    'Jupiter-Venus-Mercury strength supports Saraswati Yoga for learning and expression.',
+    'Saraswati Yoga is weak due to limited dignity/placement support.'
+  )
+
+  const kahala = (!!lord4 && !!lord9 && connected(lord4, lord9, 10)) || (!!lagnaLord && isStrongPlanet(lagnaLord) && (lagnaLord.house === 3 || lagnaLord.house === 10))
+  addYoga(
+    'Kahala Yoga',
+    kahala,
+    '4th/9th lord courage-governance linkage suggests Kahala influence.',
+    'Kahala pattern not strongly formed.'
+  )
+
+  const moonNeighbors = moon
+    ? planetsExcludingNodes.filter((p) => !['Sun', 'Moon'].includes(p.planet) && [moon.house === 1 ? 12 : moon.house - 1, moon.house === 12 ? 1 : moon.house + 1].includes(p.house))
+    : []
+  const kemadruma = !!moon && moonNeighbors.length === 0
+  addYoga(
+    'Kemadruma Yoga',
+    kemadruma,
+    'No supporting planets on either side of Moon indicates Kemadruma pattern.',
+    'Kemadruma pattern is not active due to Moon-side planetary support.'
+  )
+
+  const dusthanaLords = [houseLord(6), houseLord(8), houseLord(12)]
+  const daridra = [lord2, lord11, lord5, lord9].some((p) => !!p && dusthanaLords.includes(p.planet))
+  addYoga(
+    'Daridra Yoga',
+    daridra,
+    'Wealth lords show dusthana linkage indicating Daridra tendencies.',
+    'No strong Daridra wealth-lord affliction pattern found.'
+  )
+
+  const lagnaAfflicted = !!lagnaLord && [6, 8, 12].includes(lagnaLord.house)
+  const moonAfflicted = !!moon && [6, 8, 12].includes(moon.house)
+  const arishta = lagnaAfflicted && moonAfflicted
+  addYoga(
+    'Arishta Yoga',
+    arishta,
+    'Lagna and Moon both face difficult placements, indicating Arishta vulnerability.',
+    'No severe combined Lagna-Moon affliction for Arishta observed.'
+  )
+
+  const packedHouseCount = Array.from({ length: 12 }, (_, idx) => idx + 1).some((h) => planetsExcludingNodes.filter((p) => p.house === h).length >= 4)
+  const sanyasa = packedHouseCount || planetsExcludingNodes.filter((p) => [9, 12].includes(p.house)).length >= 3
+  addYoga(
+    'Sanyasa Yoga',
+    sanyasa,
+    'Concentrated spiritual-detachment configuration indicates Sanyasa tendency.',
+    'No strong Sanyasa concentration pattern detected.'
+  )
+
+  const guruMangal = connected(jupiter, mars, 10)
+  addYoga(
+    'Guru-Mangal Yoga',
+    guruMangal,
+    'Jupiter-Mars connection supports Guru-Mangal strategic initiative.',
+    'No strong Jupiter-Mars linkage found for Guru-Mangal.'
+  )
+
+  const lakshmiNarayan = connected(mercury, venus, 10)
+  addYoga(
+    'Lakshmi-Narayan Yoga',
+    lakshmiNarayan,
+    'Mercury-Venus linkage indicates Lakshmi-Narayan business/creative support.',
+    'Mercury-Venus linkage is not strong enough for Lakshmi-Narayan pattern.'
+  )
 
   return localizeYogas(yogas, language)
 }

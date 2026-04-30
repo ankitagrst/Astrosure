@@ -45,7 +45,13 @@ export async function searchPlaces(query: string): Promise<NominatimResult[]> {
     return data as NominatimResult[]
   } catch (error) {
     console.error('Nominatim search error:', error)
-    return []
+    // Wrap network or API errors into a UserError when appropriate so callers can show friendly messages
+    try {
+      const { UserError } = await import('../errors')
+      throw new UserError('Nominatim search failed', 'Location search temporarily unavailable. Please try again in a few moments or enter a city and country manually.', 503)
+    } catch (e) {
+      return []
+    }
   }
 }
 
