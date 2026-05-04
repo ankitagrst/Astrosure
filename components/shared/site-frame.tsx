@@ -10,9 +10,9 @@ type SiteFrameProps = {
 
 export function SiteFrame({ children }: SiteFrameProps) {
   return (
-    <div className="flex min-h-screen flex-col">
+    <div className="app-texture flex min-h-screen flex-col">
       <Header />
-      <main className="flex-1">{children}</main>
+      <main className="page-enter flex-1">{children}</main>
       <Footer />
     </div>
   )

@@ -18,8 +18,8 @@ export default function ContactPage() {
         </CardHeader>
         <CardContent className="space-y-4 text-sm leading-7 text-slate-600">
           <p>Email: contact@astrosure.com</p>
-          <p>Phone: +91 98765 43210</p>
-          <p>Address: 123, Astrology Street, Spiritual Complex, New Delhi, India 110001</p>
+          <p>Phone: +91 9782081452</p>
+          <p>Address: 115-116, Jan Path, Block D, Nirman Nagar, Brijlalpura, Jaipur, Rajasthan 302019</p>
         </CardContent>
       </Card>
 

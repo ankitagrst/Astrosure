@@ -1,6 +1,15 @@
 import Link from "next/link"
 
 export function Footer() {
+  const platformLinks = [
+    { href: "/about", label: "About Us" },
+    { href: "/terms", label: "Terms & Conditions" },
+    { href: "/privacy", label: "Privacy Policy" },
+    { href: "/contact", label: "Contact Us" },
+    { href: "/astrologer/register", label: "Astrologers Registration" },
+    { href: "/vendor/register", label: "Vendor Registration" },
+  ]
+
   return (
     <footer className="border-t border-white/60 bg-slate-950 text-white">
       <div className="mx-auto max-w-7xl px-4 py-14">
@@ -30,9 +39,9 @@ export function Footer() {
             <h4 className="mb-4 text-sm font-bold uppercase tracking-wider">Contact Info</h4>
             <div className="space-y-3 text-sm">
               <p className="font-semibold">Address:</p>
-              <p className="text-slate-300">123, Astrology Street,<br />Spiritual Complex,<br />New Delhi, India 110001</p>
+              <p className="text-slate-300">115-116, Jan Path,<br />Block D, Nirman Nagar,<br />Brijlalpura, Jaipur, Rajasthan 302019</p>
               <p className="font-semibold">Phone:</p>
-              <p className="text-slate-300">+91 98765 43210</p>
+              <p className="text-slate-300">+91 9782081452</p>
               <p className="font-semibold">Email:</p>
               <p className="text-slate-300">contact@astrosure.com</p>
             </div>
@@ -48,37 +57,66 @@ export function Footer() {
 
           {/* Our Services */}
           <div>
-            <h4 className="mb-4 text-sm font-bold uppercase tracking-wider">Our Services</h4>
+            <h4 className="mb-4 text-sm font-bold uppercase tracking-wider">Astrology Calculators</h4>
             <ul className="space-y-2 text-sm">
-              <FooterLink href="/about">About Us</FooterLink>
-              <FooterLink href="/terms">Terms & Conditions</FooterLink>
-              <FooterLink href="/privacy">Privacy Policy</FooterLink>
-              <FooterLink href="/contact">Contact Us</FooterLink>
-              <FooterLink href="/astrologer/register">Astrologers Registration</FooterLink>
-              <FooterLink href="/vendor/register">Vendor Registration</FooterLink>
+              <FooterLink href="/kundali">Birth Kundli</FooterLink>
+              <FooterLink href="/astro-tools?tool=moon-sign">Moon Sign Calculator</FooterLink>
+              <FooterLink href="/astro-tools?tool=nakshatra">Nakshatra Calculator</FooterLink>
+              <FooterLink href="/astro-tools?tool=lagna-navamsa">Lagna / Navamsa</FooterLink>
+              <FooterLink href="/astro-tools?tool=rahu-ketu">Rahu Ketu Calculator</FooterLink>
+              <FooterLink href="/astro-tools?tool=sade-sati">Sade Sati Check</FooterLink>
+              <FooterLink href="/astro-tools?tool=lal-kitab">Lal Kitab Calculator</FooterLink>
+              <FooterLink href="/panchang">Today's Panchang</FooterLink>
             </ul>
           </div>
 
-          {/* My Account + Be A Seller */}
+          {/* Numerology + Love */}
           <div className="space-y-6">
             <div>
-              <h4 className="mb-4 text-sm font-bold uppercase tracking-wider">My Account</h4>
+              <h4 className="mb-4 text-sm font-bold uppercase tracking-wider">Numerology & Fun</h4>
               <ul className="space-y-2 text-sm">
-                <FooterLink href="/dashboard">Dashboard</FooterLink>
-                <FooterLink href="/orders">Order History</FooterLink>
-                <FooterLink href="/wishlist">My Wishlist</FooterLink>
-                <FooterLink href="/track">Track Order</FooterLink>
+                <FooterLink href="/numerology">Numerology Report</FooterLink>
+                <FooterLink href="/numerology">Destiny Number</FooterLink>
+                <FooterLink href="/numerology">Personal Year</FooterLink>
+                <FooterLink href="/numerology">Lo-Shu Grid</FooterLink>
+                <FooterLink href="/numerology">Lucky Color</FooterLink>
+                <FooterLink href="/numerology">Baby Name Finder</FooterLink>
+                <FooterLink href="/numerology">Lucky Vehicle Number</FooterLink>
               </ul>
             </div>
 
             <div>
-              <h4 className="mb-3 text-sm font-bold uppercase tracking-wider">Be A Seller</h4>
-              <Link
-                href="/seller/apply"
-                className="inline-block rounded-md bg-pink-500 px-6 py-2 text-sm font-semibold hover:bg-pink-600 transition-colors"
-              >
-                APPLY NOW
-              </Link>
+              <h4 className="mb-4 text-sm font-bold uppercase tracking-wider">Love & Horoscope</h4>
+              <ul className="space-y-2 text-sm">
+                <FooterLink href="/love-fun">FLAMES Calculator</FooterLink>
+                <FooterLink href="/love-fun">Love Calculator</FooterLink>
+                <FooterLink href="/kundli-matching">Kundli Matching</FooterLink>
+                <FooterLink href="/horoscope">Daily Horoscope</FooterLink>
+                <FooterLink href="/horoscope">Personalized Horoscope</FooterLink>
+                <FooterLink href="/services/free">View All Services</FooterLink>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-10 border-t border-white/10 pt-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wider text-orange-200">Platform</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {platformLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-200 transition hover:border-orange-300 hover:bg-orange-500/10 hover:text-white"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+            </div>
+            <div className="max-w-md text-sm leading-6 text-slate-400 lg:text-right">
+              Built for real calculations, public tools, and a cleaner spiritual app experience.
             </div>
           </div>
         </div>

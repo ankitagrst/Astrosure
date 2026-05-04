@@ -4,7 +4,12 @@ Allow: /
 Allow: /kundali
 Allow: /panchang
 Allow: /horoscope
+Allow: /astro-tools
+Allow: /numerology
+Allow: /love-fun
+Allow: /kundli-matching
 Allow: /services
+Allow: /services/free
 Allow: /dashboard
 Allow: /consultations
 Allow: /about

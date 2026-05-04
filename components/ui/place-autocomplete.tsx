@@ -8,9 +8,20 @@ interface PlaceAutocompleteProps {
   onChange: (value: string) => void
   onSelect: (place: { lat: number; lng: number; formattedPlace: string }) => void
   placeholder?: string
+  id?: string
+  name?: string
+  inputClassName?: string
 }
 
-export function PlaceAutocomplete({ value, onChange, onSelect, placeholder = "Enter city, country" }: PlaceAutocompleteProps) {
+export function PlaceAutocomplete({
+  value,
+  onChange,
+  onSelect,
+  placeholder = "Enter city, country",
+  id,
+  name,
+  inputClassName,
+}: PlaceAutocompleteProps) {
   const [suggestions, setSuggestions] = useState<Array<{ display_name: string; lat: string; lon: string }>>([])
   const [isOpen, setIsOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
@@ -76,11 +87,13 @@ export function PlaceAutocomplete({ value, onChange, onSelect, placeholder = "En
   return (
     <div ref={containerRef} className="relative">
       <input
+        id={id}
+        name={name}
         type="text"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"
+        className={inputClassName || "w-full rounded-md border border-gray-300 px-3 py-2 text-sm focus:border-orange-500 focus:outline-none focus:ring-1 focus:ring-orange-500"}
       />
       
       {isLoading && (

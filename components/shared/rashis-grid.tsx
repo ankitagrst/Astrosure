@@ -24,7 +24,7 @@ export function RashisGrid() {
           {RASHIS.map((rashi) => (
             <Link
               key={rashi.name}
-              href="/dashboard/horoscope"
+              href="/horoscope"
               className="group relative overflow-hidden bg-white p-3 text-center shadow-md transition-all hover:shadow-glow-sm hover:-translate-y-0.5"
             >
               <div className="mb-2 flex justify-center">

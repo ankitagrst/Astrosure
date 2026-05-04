@@ -1,4 +1,5 @@
 import { MetadataRoute } from "next"
+import { FREE_ASTROLOGY_SERVICES } from "@/lib/services/free-services"
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const baseUrl = "https://astrosure.in"
@@ -9,9 +10,14 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/contact",
     "/blog",
     "/horoscope",
+    "/astro-tools",
+    "/numerology",
+    "/love-fun",
+    "/kundli-matching",
     "/kundali",
     "/panchang",
     "/services",
+    "/services/free",
     "/privacy",
     "/terms",
     "/login",
@@ -51,13 +57,12 @@ export default function sitemap(): MetadataRoute.Sitemap {
   }))
 
   // Services pages
-  const servicePages = ["free", "premium", "consultation", "matching"]
-  const servicesEntries: MetadataRoute.Sitemap = servicePages.map((service) => ({
-    url: `${baseUrl}/services/${service}`,
+  const servicePages: MetadataRoute.Sitemap = FREE_ASTROLOGY_SERVICES.map((service) => ({
+    url: `${baseUrl}/services/${service.slug}`,
     lastModified: new Date(),
     changeFrequency: "monthly" as const,
     priority: 0.75,
   }))
 
-  return [...staticEntries, ...horoscopeEntries, ...servicesEntries]
+  return [...staticEntries, ...horoscopeEntries, ...servicePages]
 }

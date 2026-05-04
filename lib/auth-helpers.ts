@@ -5,13 +5,11 @@
 import { auth } from "./auth"
 
 export async function getAuthUser(req?: Request) {
-  // Try Bearer token first (Flutter mobile app)
+  // Bearer token branch is reserved for future mobile JWT integration.
   if (req) {
     const authHeader = req.headers.get("Authorization")
     if (authHeader?.startsWith("Bearer ")) {
-      // TODO: Verify JWT token and return user
-      // For now, this is a placeholder for Flutter integration
-      console.log("[AUTH] Bearer token detected for Flutter")
+      return null
     }
   }
 

@@ -27,10 +27,10 @@ export default async function FreeServicesPage() {
       <div className="mb-8 rounded-3xl border border-orange-100 bg-white/85 p-6 shadow-sm sm:p-8">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-orange-700">Free Services</p>
         <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 sm:text-4xl">
-          Use services without login. Save after login.
+          Implemented astrology tools only
         </h1>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 sm:text-base">
-          All listed astrology services are accessible publicly. If you sign in, you can save services to your account and continue later from your dashboard.
+          This list includes only services currently implemented in the app with active calculation flows. Sign in to save services for quick access later from your dashboard.
         </p>
       </div>
 

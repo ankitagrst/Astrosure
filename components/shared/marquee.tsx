@@ -7,7 +7,7 @@ interface MarqueeItem {
 
 const marqueeItems: MarqueeItem[] = [
   { text: "🕉️ Free Kundali Generation - Get your birth chart now!", link: "/kundali" },
-  { text: "🔮 Daily Horoscope - Check your stars today", link: "/dashboard/horoscope" },
+  { text: "🔮 Daily Horoscope - Check your stars today", link: "/horoscope" },
   { text: "🙏 Book Puja Services - Perform rituals from home", link: "/dashboard/puja" },
   { text: "💬 Consult Expert Astrologers - Live chat available", link: "/dashboard/consult" },
   { text: "🎁 Special Offer: 20% off on first consultation", link: "/dashboard/consult" },

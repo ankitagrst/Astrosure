@@ -1,26 +1,89 @@
 "use client"
 
-import { useState } from "react"
+import { useRef, useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Globe, Bell, Search, ShoppingCart, ChevronDown, Menu, X, Home, Sparkles, Calendar, MessageCircle, Grid3X3 } from "lucide-react"
+import { Globe, Bell, Search, ShoppingCart, ChevronDown, Menu, X, Home, Sparkles, Calendar, MessageCircle } from "lucide-react"
 import { Marquee } from "./marquee"
 import { RashisGrid } from "./rashis-grid"
 
 export function Header({ showRashis = true }: { showRashis?: boolean }) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [servicesOpen, setServicesOpen] = useState(false)
+  const [mobileServicesOpen, setMobileServicesOpen] = useState(false)
+  const servicesCloseTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const pathname = usePathname()
+
+  const openServicesMenu = () => {
+    if (servicesCloseTimer.current) {
+      clearTimeout(servicesCloseTimer.current)
+      servicesCloseTimer.current = null
+    }
+    setServicesOpen(true)
+  }
+
+  const closeServicesMenuWithDelay = () => {
+    if (servicesCloseTimer.current) {
+      clearTimeout(servicesCloseTimer.current)
+    }
+    servicesCloseTimer.current = setTimeout(() => {
+      setServicesOpen(false)
+      servicesCloseTimer.current = null
+    }, 180)
+  }
 
   const navItems = [
     { href: "/", label: "Home", icon: Home },
     { href: "/kundali", label: "Kundali", icon: Sparkles },
     { href: "/panchang", label: "Panchang", icon: Calendar },
-    { href: "/services/free", label: "Services", icon: Grid3X3 },
     { href: "/horoscope", label: "Horoscope", icon: Sparkles },
     { href: "/consultations", label: "Consult", icon: MessageCircle },
 
   ]
+
+  const serviceGroups = [
+    {
+      title: "Astrology Calculators",
+      links: [
+        { href: "/kundali", label: "Birth Kundli" },
+        { href: "/astro-tools?tool=moon-sign", label: "Moon Sign Calculator" },
+        { href: "/astro-tools?tool=nakshatra", label: "Nakshatra Calculator" },
+        { href: "/astro-tools?tool=lagna-navamsa", label: "Lagna / Navamsa" },
+        { href: "/astro-tools?tool=rahu-ketu", label: "Rahu Ketu Calculator" },
+        { href: "/astro-tools?tool=sade-sati", label: "Sade Sati Check" },
+        { href: "/astro-tools?tool=lal-kitab", label: "Lal Kitab Calculator" },
+        { href: "/panchang", label: "Today's Panchang" },
+      ],
+    },
+    {
+      title: "Numerology & Fun",
+      links: [
+        { href: "/numerology", label: "Numerology Report" },
+        { href: "/numerology", label: "Destiny Number" },
+        { href: "/numerology", label: "Personal Year" },
+        { href: "/numerology", label: "Lo-Shu Grid" },
+        { href: "/numerology", label: "Lucky Color" },
+        { href: "/numerology", label: "Baby Name Finder" },
+        { href: "/numerology", label: "Lucky Vehicle Number" },
+      ],
+    },
+    {
+      title: "Love & Fun",
+      links: [
+        { href: "/love-fun", label: "FLAMES Calculator" },
+        { href: "/love-fun", label: "Love Calculator" },
+        { href: "/kundli-matching", label: "Kundli Matching" },
+      ],
+    },
+  ]
+
+  const serviceActive =
+    pathname.startsWith("/services") ||
+    pathname.startsWith("/astro-tools") ||
+    pathname.startsWith("/numerology") ||
+    pathname.startsWith("/love-fun") ||
+    pathname.startsWith("/kundli-matching")
 
   return (
     <>
@@ -59,6 +122,59 @@ export function Header({ showRashis = true }: { showRashis?: boolean }) {
                   {item.label}
                 </NavLink>
               ))}
+              <div
+                className="relative"
+                onMouseEnter={openServicesMenu}
+                onMouseLeave={closeServicesMenuWithDelay}
+              >
+                <button
+                  type="button"
+                  className={`inline-flex items-center gap-1 rounded-full px-4 py-2 text-sm font-medium transition-colors ${
+                    serviceActive
+                      ? "bg-orange-500 text-white shadow-sm shadow-orange-500/25"
+                      : "text-slate-700 hover:bg-orange-50 hover:text-orange-700"
+                  }`}
+                >
+                  Services
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+
+                {servicesOpen ? (
+                  <div
+                    className="absolute left-1/2 z-50 pt-2 w-[760px] -translate-x-1/2"
+                    onMouseEnter={openServicesMenu}
+                    onMouseLeave={closeServicesMenuWithDelay}
+                  >
+                    <div className="rounded-2xl border border-orange-100 bg-white p-5 shadow-2xl">
+                    <div className="grid gap-6 md:grid-cols-3">
+                      {serviceGroups.map((group) => (
+                        <div key={group.title}>
+                          <p className="mb-3 border-b border-orange-100 pb-2 text-xs font-bold uppercase tracking-[0.18em] text-orange-700">
+                            {group.title}
+                          </p>
+                          <div className="space-y-1">
+                            {group.links.map((link) => (
+                              <Link
+                                key={`${group.title}-${link.label}`}
+                                href={link.href}
+                                className="block rounded-lg px-2 py-1.5 text-sm text-slate-700 transition-colors hover:bg-orange-50 hover:text-orange-700"
+                              >
+                                {link.label}
+                              </Link>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="mt-4 border-t border-orange-100 pt-3 text-right">
+                      <Link href="/services/free" className="text-sm font-semibold text-orange-700 hover:text-orange-800">
+                        View all services
+                      </Link>
+                    </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
             </nav>
 
             {/* Right side icons */}
@@ -131,6 +247,44 @@ export function Header({ showRashis = true }: { showRashis?: boolean }) {
                       {item.label}
                     </MobileNavLink>
                   ))}
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-orange-100 bg-orange-50/70 p-3">
+                  <button
+                    type="button"
+                    onClick={() => setMobileServicesOpen((value) => !value)}
+                    className="flex w-full items-center justify-between rounded-xl px-2 py-2 text-sm font-semibold text-slate-800"
+                  >
+                    <span>Services</span>
+                    <ChevronDown className={`h-4 w-4 transition-transform ${mobileServicesOpen ? "rotate-180" : ""}`} />
+                  </button>
+                  {mobileServicesOpen ? (
+                    <div className="mt-2 space-y-3 px-2 pb-2">
+                      {serviceGroups.map((group) => (
+                        <div key={`mobile-${group.title}`}>
+                          <p className="mb-1 text-[11px] font-bold uppercase tracking-wider text-orange-700">{group.title}</p>
+                          <div className="space-y-1">
+                            {group.links.map((link) => (
+                              <MobileNavLink key={`mobile-${group.title}-${link.label}`} href={link.href} onNavigate={() => setMobileMenuOpen(false)}>
+                                {link.label}
+                              </MobileNavLink>
+                            ))}
+                          </div>
+                        </div>
+                      ))}
+                      <MobileNavLink href="/services/free" onNavigate={() => setMobileMenuOpen(false)}>
+                        View all services
+                      </MobileNavLink>
+                    </div>
+                  ) : null}
+                </div>
+
+                <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-3">
+                  <p className="px-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Quick Access</p>
+                  <div className="mt-2 space-y-1">
+                    <MobileNavLink href="/services/free" onNavigate={() => setMobileMenuOpen(false)}>All Services</MobileNavLink>
+                    <MobileNavLink href="/horoscope" onNavigate={() => setMobileMenuOpen(false)}>Horoscope</MobileNavLink>
+                  </div>
                 </div>
 
                 <div className="mt-6 rounded-2xl bg-slate-50 p-4">

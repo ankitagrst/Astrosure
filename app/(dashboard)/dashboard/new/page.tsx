@@ -6,10 +6,12 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { PlaceAutocomplete } from "@/components/ui/place-autocomplete"
 
 export default function NewKundaliPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
+  const [place, setPlace] = useState("")
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -19,13 +21,13 @@ export default function NewKundaliPage() {
     const name = formData.get("name") as string
     const dob = formData.get("dob") as string
     const tob = formData.get("tob") as string
-    const place = formData.get("place") as string
+    const placeValue = place || (formData.get("place") as string)
 
     try {
       const res = await fetch("/api/v1/kundali", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, dob, tob, place }),
+        body: JSON.stringify({ name, dob, tob, place: placeValue }),
       })
 
       const data = await res.json()
@@ -63,7 +65,15 @@ export default function NewKundaliPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="place">Place of Birth</Label>
-              <Input id="place" name="place" placeholder="City, Country" required />
+              <PlaceAutocomplete
+                id="place"
+                name="place"
+                value={place}
+                onChange={setPlace}
+                onSelect={(selected) => setPlace(selected.formattedPlace)}
+                placeholder="City, Country"
+                inputClassName="h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
             </div>
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Generating..." : "Generate Chart"}

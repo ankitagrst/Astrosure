@@ -58,7 +58,7 @@ export default async function DashboardPage() {
         <ActionCard
           title="Daily Horoscope"
           description="Open your daily predictions and guidance feed."
-          hrefPrimary="/dashboard/horoscope"
+          hrefPrimary="/horoscope"
           labelPrimary="Read Horoscope"
           icon={<Sparkles className="h-5 w-5" />}
         />
