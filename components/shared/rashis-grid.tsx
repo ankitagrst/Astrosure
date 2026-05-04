@@ -1,4 +1,5 @@
 import Link from "next/link"
+import { ZODIAC_IMAGES } from "@/lib/zodiac-images"
 
 const RASHIS = [
   { name: "Aries", hindi: "Mesha", symbol: "♈", color: "from-red-500 to-orange-500" },
@@ -26,9 +27,15 @@ export function RashisGrid() {
               href="/dashboard/horoscope"
               className="group relative overflow-hidden bg-white p-3 text-center shadow-md transition-all hover:shadow-glow-sm hover:-translate-y-0.5"
             >
-              {/* <div className={`mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br ${rashi.color} text-white shadow-md transition-transform group-hover:scale-105`}>
-                <ZodiacIcon symbol={rashi.symbol} />
-              </div> */}
+              <div className="mb-2 flex justify-center">
+                <div className="relative h-12 w-12 overflow-hidden rounded-full bg-gradient-to-br shadow-md transition-transform group-hover:scale-105">
+                  <img 
+                    src={ZODIAC_IMAGES[rashi.name]} 
+                    alt={`${rashi.name} rashi illustration`} 
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              </div>
               <h3 className="text-sm font-semibold text-gray-900 group-hover:text-saffron-600">{rashi.name}</h3>
               <p className="text-xs text-gray-500">{rashi.hindi}</p>
             </Link>

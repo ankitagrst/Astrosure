@@ -72,29 +72,32 @@ export default function LoginForm() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <Card className="w-full max-w-md bg-slate-900 border-slate-700">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center text-white">AstroSure</CardTitle>
-          <CardDescription className="text-center text-slate-400">
-            Sign in to your account
+    <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-lg items-center px-4 py-10">
+      <Card className="w-full border border-orange-100 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+        <CardHeader className="space-y-2 pb-4 text-center">
+          <div className="mx-auto inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-orange-700">
+            Secure sign in
+          </div>
+          <CardTitle className="text-2xl font-bold text-slate-950">Welcome back</CardTitle>
+          <CardDescription className="text-slate-600">
+            Sign in to access your saved kundalis and dashboards.
           </CardDescription>
           {registered && (
-            <div className="mt-3 rounded bg-green-900/20 p-3 text-sm text-green-400 border border-green-700">
-              Registration successful! Please sign in.
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-left text-sm text-emerald-700">
+              Registration successful. Please sign in.
             </div>
           )}
         </CardHeader>
 
         <form onSubmit={handleLogin}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pb-2">
             {error && (
-              <div className="rounded bg-red-900/20 p-3 text-sm text-red-400 border border-red-700">
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-white">
+              <Label htmlFor="email" className="text-slate-700">
                 Email
               </Label>
               <Input
@@ -103,13 +106,13 @@ export default function LoginForm() {
                 placeholder="name@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="bg-slate-700 border-slate-600 text-white placeholder-slate-500"
+                className="h-11 border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus-visible:ring-orange-500"
                 required
                 autoComplete="email"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-white">
+              <Label htmlFor="password" className="text-slate-700">
                 Password
               </Label>
               <Input
@@ -118,35 +121,32 @@ export default function LoginForm() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="bg-slate-700 border-slate-600 text-white placeholder-slate-500"
+                className="h-11 border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus-visible:ring-orange-500"
                 required
                 autoComplete="current-password"
               />
             </div>
           </CardContent>
 
-          <CardFooter className="flex flex-col space-y-4">
+          <CardFooter className="flex flex-col gap-4 pt-4">
             <Button
               type="submit"
-              className="w-full bg-gradient-to-r from-orange-600 to-orange-700 hover:from-orange-700 hover:to-orange-800"
+              className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-600 via-amber-500 to-orange-700 font-semibold text-white shadow-lg shadow-orange-500/20 transition-transform hover:-translate-y-0.5 hover:from-orange-500 hover:to-orange-700"
               disabled={isLoading}
             >
-              {isLoading ? "Signing in..." : "Sign In"}
+              {isLoading ? "Signing in..." : "Sign in"}
             </Button>
 
-            <div className="space-y-2 text-sm text-center text-slate-400">
+            <div className="space-y-2 text-center text-sm text-slate-500">
               <p>
                 Don&apos;t have an account?{" "}
-                <Link href="/register" className="text-orange-500 hover:text-orange-400 font-semibold">
-                  Sign up as User
+                <Link href="/register" className="font-semibold text-orange-600 hover:text-orange-500">
+                  Sign up as user
                 </Link>
               </p>
               <p>
                 Want to become an astrologer?{" "}
-                <Link
-                  href="/astrologer/register"
-                  className="text-purple-500 hover:text-purple-400 font-semibold"
-                >
+                <Link href="/astrologer/register" className="font-semibold text-violet-600 hover:text-violet-500">
                   Register here
                 </Link>
               </p>

@@ -1,0 +1,31 @@
+# AstroSure SEO Robots Configuration
+User-agent: *
+Allow: /
+Allow: /kundali
+Allow: /panchang
+Allow: /horoscope
+Allow: /services
+Allow: /dashboard
+Allow: /consultations
+Allow: /about
+Allow: /contact
+Allow: /blog
+
+Disallow: /admin
+Disallow: /api
+Disallow: /auth
+Disallow: /*.json$
+Disallow: /*?*sort=
+Disallow: /*?*filter=
+Disallow: /*?*page=
+
+# Crawl delay to prevent server overload
+Crawl-delay: 1
+
+# Sitemap location
+Sitemap: https://astrosure.in/sitemap.xml
+
+# Google-specific rules
+User-agent: Googlebot
+Allow: /
+Crawl-delay: 0.5

@@ -48,66 +48,73 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold text-center">Create an account</CardTitle>
-          <CardDescription className="text-center">
-            Enter your details to get started with AstroSure
+    <div className="mx-auto flex min-h-[calc(100vh-6rem)] max-w-lg items-center px-4 py-10">
+      <Card className="w-full border border-orange-100 bg-white/95 shadow-[0_24px_80px_rgba(15,23,42,0.12)]">
+        <CardHeader className="space-y-2 pb-4 text-center">
+          <div className="mx-auto inline-flex rounded-full border border-orange-200 bg-orange-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.24em] text-orange-700">
+            New member access
+          </div>
+          <CardTitle className="text-2xl font-bold text-slate-950">Create your account</CardTitle>
+          <CardDescription className="text-slate-600">
+            Enter your details to get started with AstroSure.
           </CardDescription>
         </CardHeader>
         <form onSubmit={onSubmit}>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 pb-2">
             {error && (
-              <div className="rounded bg-red-50 p-3 text-sm text-red-600">
+              <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
                 {error}
               </div>
             )}
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name" className="text-slate-700">Full Name</Label>
               <Input
                 id="name"
                 name="name"
                 placeholder="John Doe"
                 required
+                className="h-11 border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus-visible:ring-orange-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-slate-700">Email</Label>
               <Input
                 id="email"
                 name="email"
                 type="email"
                 placeholder="name@example.com"
                 required
+                className="h-11 border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus-visible:ring-orange-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="phone">Phone (optional)</Label>
+              <Label htmlFor="phone" className="text-slate-700">Phone (optional)</Label>
               <Input
                 id="phone"
                 name="phone"
                 type="tel"
                 placeholder="+91 9876543210"
+                className="h-11 border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus-visible:ring-orange-500"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-slate-700">Password</Label>
               <Input
                 id="password"
                 name="password"
                 type="password"
                 required
+                className="h-11 border-slate-200 bg-white text-slate-950 placeholder:text-slate-400 focus-visible:ring-orange-500"
               />
             </div>
           </CardContent>
-          <CardFooter className="flex flex-col space-y-4">
-            <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? "Creating account..." : "Create Account"}
+          <CardFooter className="flex flex-col gap-4 pt-4">
+            <Button type="submit" className="h-11 w-full rounded-xl bg-gradient-to-r from-orange-600 via-amber-500 to-orange-700 font-semibold text-white shadow-lg shadow-orange-500/20 transition-transform hover:-translate-y-0.5 hover:from-orange-500 hover:to-orange-700" disabled={isLoading}>
+              {isLoading ? "Creating account..." : "Create account"}
             </Button>
-            <p className="text-sm text-center text-gray-600">
+            <p className="text-center text-sm text-slate-500">
               Already have an account?{" "}
-              <Link href="/login" className="text-orange-600 hover:underline">
+              <Link href="/login" className="font-semibold text-orange-600 hover:text-orange-500">
                 Sign in
               </Link>
             </p>

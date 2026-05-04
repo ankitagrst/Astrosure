@@ -36,6 +36,7 @@ model User {
   donations     Donation[]
   consultations Consultation[]
   savedServices SavedService[]
+  astrologer    Astrologer?
 
   // Manager relationships
   managedAstrologers Astrologer[] @relation("ManagedBy")
@@ -63,6 +64,7 @@ model Astrologer {
 
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   manager User?   @relation("ManagedBy", fields: [managerId], references: [id])
+  consultations Consultation[]
 
   @@map("astrologers")
 }
@@ -142,24 +144,6 @@ model MatchingReport {
   createdAt   DateTime @default(now())
 
   @@map("matching_reports")
-}
-
-model Astrologer {
-  id            String   @id @default(cuid())
-  userId        String   @unique
-  bio           String?  @db.Text
-  specialties   Json
-  experience    Int
-  languages     Json
-  rating        Float    @default(0)
-  isVerified    Boolean  @default(false)
-  isActive      Boolean  @default(true)
-  perMinuteRate Int
-  createdAt     DateTime @default(now())
-
-  consultations Consultation[]
-
-  @@map("astrologers")
 }
 
 model Consultation {
