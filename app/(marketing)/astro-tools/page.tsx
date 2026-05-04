@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
 import { useSearchParams } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -46,7 +46,7 @@ const TOOL_ITEMS = [
   { key: "lal-kitab", label: "Lal Kitab Calculator" },
 ] as const
 
-export default function AstroToolsPage() {
+function AstroToolsContent() {
   const searchParams = useSearchParams()
   const initialTool = searchParams.get("tool") || "moon-sign"
 
@@ -229,5 +229,21 @@ export default function AstroToolsPage() {
         </Card>
       )}
     </section>
+  )
+}
+
+export default function AstroToolsPage() {
+  return (
+    <Suspense
+      fallback={
+        <section className="mx-auto w-full max-w-7xl px-4 py-10 sm:py-14">
+          <Card className="border-orange-100 bg-white/90">
+            <CardContent className="py-8 text-sm text-slate-600">Loading tools...</CardContent>
+          </Card>
+        </section>
+      }
+    >
+      <AstroToolsContent />
+    </Suspense>
   )
 }
