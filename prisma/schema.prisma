@@ -10,6 +10,7 @@ datasource db {
 enum Role {
   USER
   ASTROLOGER
+  MANAGER
   ADMIN
 }
 
@@ -36,7 +37,49 @@ model User {
   consultations Consultation[]
   savedServices SavedService[]
 
+  // Manager relationships
+  managedAstrologers Astrologer[] @relation("ManagedBy")
+  createdManagers    User[]       @relation("CreatedBy")
+  createdBy          User?        @relation("CreatedBy", fields: [createdById], references: [id])
+  createdById        String?
+
+  // Admin audit log
+  auditLogs          AuditLog[]   @relation("PerformedBy")
+
   @@map("users")
+}
+
+model Astrologer {
+  id             String   @id @default(cuid())
+  userId         String   @unique
+  specialization String
+  experience     Int      @default(0)
+  bio            String?  @db.Text
+  rating         Float    @default(0)
+  verified       Boolean  @default(false)
+  managerId      String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  manager User?   @relation("ManagedBy", fields: [managerId], references: [id])
+
+  @@map("astrologers")
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String   // e.g., "create_manager", "create_astrologer", "delete_user"
+  entity    String   // e.g., "user", "astrologer", "manager"
+  entityId  String
+  details   Json?
+  createdAt DateTime @default(now())
+
+  admin User @relation("PerformedBy", fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@map("audit_logs")
 }
 
 model SavedService {

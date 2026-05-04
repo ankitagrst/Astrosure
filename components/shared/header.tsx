@@ -4,7 +4,7 @@ import { useState } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { Globe, Bell, Search, ShoppingCart, ChevronDown, Menu, X, Home, Sparkles, Calendar, MessageCircle, ShoppingBag, Grid3X3 } from "lucide-react"
+import { Globe, Bell, Search, ShoppingCart, ChevronDown, Menu, X, Home, Sparkles, Calendar, MessageCircle, Grid3X3 } from "lucide-react"
 import { Marquee } from "./marquee"
 import { RashisGrid } from "./rashis-grid"
 
@@ -19,7 +19,7 @@ export function Header({ showRashis = true }: { showRashis?: boolean }) {
     { href: "/services/free", label: "Services", icon: Grid3X3 },
     { href: "/horoscope", label: "Horoscope", icon: Sparkles },
     { href: "/consultations", label: "Consult", icon: MessageCircle },
-    { href: "/shop", label: "Shop", icon: ShoppingBag },
+
   ]
 
   return (

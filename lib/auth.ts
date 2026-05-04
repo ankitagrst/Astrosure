@@ -24,12 +24,35 @@ export const {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        role: { label: 'Role', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
           return null
         }
 
+        const role = (credentials.role as string) || ''
+
+        // Admin hardcoded credentials - try first if role is ADMIN or not specified
+        if (role === 'ADMIN' || !role) {
+          if (
+            credentials.email === process.env.ADMIN_EMAIL &&
+            credentials.password === process.env.ADMIN_PASSWORD
+          ) {
+            return {
+              id: 'admin-system',
+              email: credentials.email as string,
+              name: 'System Admin',
+              role: 'ADMIN',
+            }
+          }
+          // If role is explicitly ADMIN but credentials don't match, return null
+          if (role === 'ADMIN') {
+            return null
+          }
+        }
+
+        // For non-admin, look up user in database
         const user = await prisma.user.findUnique({
           where: { email: credentials.email as string },
         })

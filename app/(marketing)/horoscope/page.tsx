@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
+// Use plain <img> for simple local SVGs to avoid next/image optimization issues
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import {
@@ -25,6 +26,7 @@ import {
   HOROSCOPE_PROFILES,
   HOROSCOPE_SIGNS,
   getHoroscopeGradient,
+  getHoroscopeProfile,
 } from "@/lib/astrology/horoscope-data"
 
 function getElementIcon(element: string) {
@@ -152,9 +154,11 @@ export default function PublicHoroscopePage() {
                           : "border border-gray-100 bg-gray-50 text-gray-700 hover:border-orange-200 hover:bg-orange-50"
                       }`}
                     >
-                      <div className="flex flex-col items-center gap-1">
-                        <span className="text-lg">{profile.symbol}</span>
-                        <span>{signName.slice(0, 3)}</span>
+                        <div className="flex flex-col items-center gap-1">
+                            <div className="relative h-10 w-10 overflow-hidden rounded-full bg-white/90 shadow-sm ring-1 ring-black/5">
+                              <img src={profile.image} alt={`${signName} rashi illustration`} className="h-full w-full object-cover" />
+                            </div>
+                          <span>{signName.slice(0, 3)}</span>
                       </div>
                     </button>
                   )
@@ -183,7 +187,9 @@ export default function PublicHoroscopePage() {
                 <div className={`rounded-2xl bg-gradient-to-br ${getHoroscopeGradient(selectedSign)} p-6 text-white shadow-xl`}>
                   <div className="mb-4 flex items-start justify-between gap-4">
                     <div className="flex items-center gap-4">
-                      <span className="text-5xl">{activeHoroscope.symbol}</span>
+                      <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-white/15 shadow-lg ring-1 ring-white/20">
+                        <img src={getHoroscopeProfile(selectedSign).image} alt={`${selectedSign} rashi illustration`} className="h-full w-full object-cover" />
+                      </div>
                       <div>
                         <h1 className="text-3xl font-bold">{selectedSign}</h1>
                         <p className="mt-1 flex items-center gap-1 text-sm opacity-90">

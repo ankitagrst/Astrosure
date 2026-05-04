@@ -122,6 +122,7 @@ export interface Dosha {
   description: string
   remedies: string[]
   type?: string
+  influenceScore?: number // 0-100, higher = more influence on life
 }
 
 export interface Yoga {
@@ -129,6 +130,7 @@ export interface Yoga {
   present: boolean
   strength: 'low' | 'medium' | 'high'
   description: string
+  influenceScore?: number // 0-100, higher = more beneficial influence
 }
 
 export interface PlanetaryStrengthening {
@@ -345,17 +347,42 @@ function calculateDoshas(
 
   const isConjunct = (a: PlanetPosition, b: PlanetPosition, orb: number) => conjunctionOrb(a.longitude, b.longitude) <= orb
 
+  // Calculate influence score based on severity, type, and exactness
+  const calculateInfluenceScore = (
+    present: boolean,
+    severity: 'low' | 'medium' | 'high',
+    type: string = 'Minor',
+    exactness: number = 1 // 0-1, where 1 is exact
+  ): number => {
+    if (!present) return 0
+    
+    const typeMultiplier = type === 'Major' ? 1.3 : 1.0
+    const severityBase = { low: 20, medium: 50, high: 80 }[severity]
+    const exactnessBonus = exactness * 20 // 0-20 bonus for exactness
+    
+    return Math.min(100, Math.round((severityBase + exactnessBonus) * typeMultiplier))
+  }
+
   const addDosha = (dosha: Dosha) => {
+    // Auto-calculate influence score if not provided
+    if (dosha.present && !dosha.influenceScore) {
+      const type = dosha.type || 'Minor'
+      const severity = dosha.severity
+      dosha.influenceScore = calculateInfluenceScore(dosha.present, severity, type, 0.8)
+    } else if (!dosha.present) {
+      dosha.influenceScore = 0
+    }
     doshas.push(dosha)
   }
   
   // Mangal Dosha (Mars in 1, 2, 4, 7, 8, 12th house)
   const mars = planets.find(p => p.planet === 'Mars')
   if (mars && [1, 2, 4, 7, 8, 12].includes(mars.house)) {
+    const severity = mars.house === 7 ? 'high' : 'medium'
     addDosha({
       name: 'Mangal Dosha',
       present: true,
-      severity: mars.house === 7 ? 'high' : 'medium',
+      severity,
       description: 'Mars is positioned in a house that creates Mangal Dosha, which can affect marital harmony.',
       remedies: [
         'Perform Kumbh Vivah (marriage with pot)',
@@ -967,12 +994,23 @@ function calculateYogas(planets: PlanetPosition[], ascendant: PlanetPosition, la
 
   const planetsExcludingNodes = planets.filter((p) => !['Rahu', 'Ketu'].includes(p.planet))
 
+  const calculateYogaInfluenceScore = (
+    present: boolean,
+    strength: 'high' | 'medium' | 'low'
+  ): number => {
+    if (!present) return 0
+    const strengthBase = { high: 75, medium: 50, low: 25 }[strength]
+    return Math.min(100, Math.round(strengthBase + 15)) // +15 for being present and beneficial
+  }
+
   const addYoga = (name: string, present: boolean, highText: string, lowText: string, highStrength: 'high' | 'medium' = 'medium') => {
+    const strength = present ? highStrength : 'low'
     yogas.push({
       name,
       present,
-      strength: present ? highStrength : 'low',
+      strength,
       description: present ? highText : lowText,
+      influenceScore: calculateYogaInfluenceScore(present, strength),
     })
   }
 

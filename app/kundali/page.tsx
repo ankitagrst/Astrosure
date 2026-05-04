@@ -210,9 +210,7 @@ function KundaliContent() {
 
   // Dosha/Yoga filters
   const [doshaPresentOnly, setDoshaPresentOnly] = useState<boolean>(true)
-  const [doshaSeverityFilter, setDoshaSeverityFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
   const [yogaPresentOnly, setYogaPresentOnly] = useState<boolean>(true)
-  const [yogaStrengthFilter, setYogaStrengthFilter] = useState<'all' | 'high' | 'medium' | 'low'>('all')
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -870,76 +868,59 @@ function KundaliContent() {
                             <div className="flex items-center gap-2">
                               <label className="inline-flex items-center gap-2 text-sm">
                                 <input type="checkbox" checked={doshaPresentOnly} onChange={(e) => setDoshaPresentOnly(e.target.checked)} className="h-4 w-4" />
-                                <span className="text-sm text-gray-700">{language === 'hi' ? 'केवल मौजूद दोष' : 'Only show present doshas'}</span>
+                                <span className="text-sm text-gray-700">{language === 'hi' ? 'केवल प्रभावशाली दोष' : 'Only show influential doshas'}</span>
                               </label>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <label className="text-sm text-gray-600 mr-2">{language === 'hi' ? 'प्राथमिकता' : 'Priority'}:</label>
-                              <select value={doshaSeverityFilter} onChange={(e) => setDoshaSeverityFilter(e.target.value as any)} className="rounded-md border px-2 py-1 text-sm">
-                                <option value="all">{language === 'hi' ? 'सभी' : 'All'}</option>
-                                <option value="high">{language === 'hi' ? 'उच्च' : 'High'}</option>
-                                <option value="medium">{language === 'hi' ? 'मध्यम' : 'Medium'}</option>
-                                <option value="low">{language === 'hi' ? 'कम' : 'Low'}</option>
-                              </select>
                             </div>
                           </div>
 
-                          {/* Render grouped by severity when 'all' selected, otherwise filtered list */}
-                          {doshaSeverityFilter === 'all' ? (
-                            ['high', 'medium', 'low'].map((level) => {
-                              const group = chart.comprehensiveReport!.doshas.filter((d) => d.severity === (level as 'high'|'medium'|'low'))
-                                .filter((d) => !doshaPresentOnly || d.present)
-                              if (group.length === 0) return null
-                              return (
-                                <div key={level}>
-                                  <h5 className="mb-2 text-xs font-semibold uppercase text-gray-500">{level === 'high' ? (language === 'hi' ? 'उच्च' : 'High') : level === 'medium' ? (language === 'hi' ? 'मध्यम' : 'Medium') : (language === 'hi' ? 'कम' : 'Low')}</h5>
-                                  <div className="grid gap-2">
-                                    {group.map((dosha, idx) => (
-                                      <div key={idx} className="rounded-lg border bg-orange-50 p-3">
-                                        <div className="flex items-center justify-between">
-                                          <h4 className="font-semibold text-gray-900 text-sm">{dosha.name}</h4>
-                                          <span className={`rounded px-2 py-0.5 text-xs font-bold ${
-                                            dosha.severity === 'high' ? 'bg-red-100 text-red-700' :
-                                            dosha.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-green-100 text-green-700'
-                                          }`}>
-                                            {dosha.severity.toUpperCase()}
-                                          </span>
-                                        </div>
-                                        <p className={`mt-1 text-xs font-semibold ${dosha.present ? 'text-red-700' : 'text-green-700'}`}>
-                                          {dosha.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
-                                        </p>
-                                        {dosha.type && <p className="mt-0.5 text-[11px] text-gray-500">{language === 'hi' ? 'प्रकार' : 'Type'}: {dosha.type}</p>}
-                                        <p className="mt-1 text-xs text-gray-600">{dosha.description}</p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )
-                            })
-                          ) : (
-                            chart.comprehensiveReport.doshas
-                              .filter((d) => d.severity === doshaSeverityFilter)
-                              .filter((d) => !doshaPresentOnly || d.present)
-                              .map((dosha, index) => (
-                                <div key={index} className="rounded-lg border bg-orange-50 p-3">
-                                  <div className="flex items-center justify-between">
+                          {/* Sort by influence score and show only significant ones */}
+                          {chart.comprehensiveReport.doshas
+                            .filter((d) => !doshaPresentOnly || (d.present && (d.influenceScore ?? 0) > 40))
+                            .sort((a, b) => (b.influenceScore ?? 0) - (a.influenceScore ?? 0))
+                            .map((dosha, idx) => (
+                              <div key={idx} className={`rounded-lg border p-3 ${dosha.present ? 'bg-orange-50 border-orange-300' : 'bg-gray-50 border-gray-200'}`}>
+                                <div className="flex items-start justify-between mb-2">
+                                  <div>
                                     <h4 className="font-semibold text-gray-900 text-sm">{dosha.name}</h4>
-                                    <span className={`rounded px-2 py-0.5 text-xs font-bold ${
-                                      dosha.severity === 'high' ? 'bg-red-100 text-red-700' :
-                                      dosha.severity === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-green-100 text-green-700'
-                                    }`}>
-                                      {dosha.severity.toUpperCase()}
-                                    </span>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                        dosha.present 
+                                          ? dosha.severity === 'high' ? 'bg-red-200 text-red-800' 
+                                            : dosha.severity === 'medium' ? 'bg-yellow-200 text-yellow-800'
+                                            : 'bg-blue-200 text-blue-800'
+                                          : 'bg-green-200 text-green-800'
+                                      }`}>
+                                        {dosha.present ? language === 'hi' ? 'मौजूद' : 'Present' : language === 'hi' ? 'अनुपस्थित' : 'Not Present'}
+                                      </span>
+                                      {dosha.influenceScore && dosha.influenceScore > 0 && (
+                                        <span className="text-xs font-bold text-orange-600">
+                                          {language === 'hi' ? 'प्रभाव' : 'Influence'}: {dosha.influenceScore}%
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                  <p className={`mt-1 text-xs font-semibold ${dosha.present ? 'text-red-700' : 'text-green-700'}`}>
-                                    {dosha.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
-                                  </p>
-                                  {dosha.type && <p className="mt-0.5 text-[11px] text-gray-500">{language === 'hi' ? 'प्रकार' : 'Type'}: {dosha.type}</p>}
-                                  <p className="mt-1 text-xs text-gray-600">{dosha.description}</p>
                                 </div>
-                              ))
+                                {dosha.influenceScore && dosha.influenceScore > 0 && (
+                                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                    <div className="bg-orange-500 h-2 rounded-full transition-all" style={{ width: `${dosha.influenceScore}%` }}></div>
+                                  </div>
+                                )}
+                                <p className="text-sm text-gray-700 mb-2">{dosha.description}</p>
+                                {dosha.present && dosha.remedies && dosha.remedies.length > 0 && (
+                                  <div>
+                                    <p className="text-xs font-semibold text-gray-700 mb-1">{language === 'hi' ? 'उपाय' : 'Remedies'}:</p>
+                                    <ul className="text-xs text-gray-600 space-y-1">
+                                      {dosha.remedies.map((remedy, i) => (
+                                        <li key={i}>• {remedy}</li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+
+                          {chart.comprehensiveReport.doshas.filter((d) => !doshaPresentOnly || (d.present && (d.influenceScore ?? 0) > 40)).length === 0 && (
+                            <p className="text-sm text-gray-500">{language === 'hi' ? 'कोई प्रभावशाली दोष नहीं पाया गया' : 'No influential doshas detected'}</p>
                           )}
                         </div>
                       </CardContent>
@@ -956,72 +937,48 @@ function KundaliContent() {
                           <div className="flex items-center justify-between gap-3 mb-3">
                             <label className="inline-flex items-center gap-2 text-sm">
                               <input type="checkbox" checked={yogaPresentOnly} onChange={(e) => setYogaPresentOnly(e.target.checked)} className="h-4 w-4" />
-                              <span className="text-sm text-gray-700">{language === 'hi' ? 'केवल मौजूद योग' : 'Only show present yogas'}</span>
+                              <span className="text-sm text-gray-700">{language === 'hi' ? 'केवल प्रभावशाली योग' : 'Only show influential yogas'}</span>
                             </label>
-                            <div className="flex items-center gap-2">
-                              <label className="text-sm text-gray-600 mr-2">{language === 'hi' ? 'शक्ति' : 'Strength'}:</label>
-                              <select value={yogaStrengthFilter} onChange={(e) => setYogaStrengthFilter(e.target.value as any)} className="rounded-md border px-2 py-1 text-sm">
-                                <option value="all">{language === 'hi' ? 'सभी' : 'All'}</option>
-                                <option value="high">{language === 'hi' ? 'उच्च' : 'High'}</option>
-                                <option value="medium">{language === 'hi' ? 'मध्यम' : 'Medium'}</option>
-                                <option value="low">{language === 'hi' ? 'कम' : 'Low'}</option>
-                              </select>
-                            </div>
                           </div>
 
-                          {yogaStrengthFilter === 'all' ? (
-                            ['high', 'medium', 'low'].map((level) => {
-                              const group = chart.comprehensiveReport!.yogas.filter((y) => y.strength === (level as 'high'|'medium'|'low'))
-                                .filter((y) => !yogaPresentOnly || y.present)
-                              if (group.length === 0) return null
-                              return (
-                                <div key={level}>
-                                  <h5 className="mb-2 text-xs font-semibold uppercase text-gray-500">{level === 'high' ? (language === 'hi' ? 'उच्च' : 'High') : level === 'medium' ? (language === 'hi' ? 'मध्यम' : 'Medium') : (language === 'hi' ? 'कम' : 'Low')}</h5>
-                                  <div className="grid gap-2">
-                                    {group.map((yoga, idx) => (
-                                      <div key={idx} className="rounded-lg border bg-blue-50 p-3">
-                                        <div className="flex items-center justify-between">
-                                          <h4 className="font-semibold text-gray-900 text-sm">{yoga.name}</h4>
-                                          <span className={`rounded px-2 py-0.5 text-xs font-bold ${
-                                            yoga.strength === 'high' ? 'bg-green-100 text-green-700' :
-                                            yoga.strength === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                            'bg-gray-100 text-gray-700'
-                                          }`}>
-                                            {yoga.strength.toUpperCase()}
-                                          </span>
-                                        </div>
-                                        <p className={`mt-1 text-xs font-semibold ${yoga.present ? 'text-green-700' : 'text-gray-600'}`}>
-                                          {yoga.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
-                                        </p>
-                                        <p className="mt-1 text-xs text-gray-600">{yoga.description}</p>
-                                      </div>
-                                    ))}
-                                  </div>
-                                </div>
-                              )
-                            })
-                          ) : (
-                            chart.comprehensiveReport.yogas
-                              .filter((y) => y.strength === yogaStrengthFilter)
-                              .filter((y) => !yogaPresentOnly || y.present)
-                              .map((yoga, index) => (
-                                <div key={index} className="rounded-lg border bg-blue-50 p-3">
-                                  <div className="flex items-center justify-between">
+                          {/* Sort by influence score and show only significant ones */}
+                          {chart.comprehensiveReport.yogas
+                            .filter((y) => !yogaPresentOnly || (y.present && (y.influenceScore ?? 0) > 40))
+                            .sort((a, b) => (b.influenceScore ?? 0) - (a.influenceScore ?? 0))
+                            .map((yoga, idx) => (
+                              <div key={idx} className={`rounded-lg border p-3 ${yoga.present ? 'bg-blue-50 border-blue-300' : 'bg-gray-50 border-gray-200'}`}>
+                                <div className="flex items-start justify-between mb-2">
+                                  <div>
                                     <h4 className="font-semibold text-gray-900 text-sm">{yoga.name}</h4>
-                                    <span className={`rounded px-2 py-0.5 text-xs font-bold ${
-                                      yoga.strength === 'high' ? 'bg-green-100 text-green-700' :
-                                      yoga.strength === 'medium' ? 'bg-yellow-100 text-yellow-700' :
-                                      'bg-gray-100 text-gray-700'
-                                    }`}>
-                                      {yoga.strength.toUpperCase()}
-                                    </span>
+                                    <div className="flex items-center gap-2 mt-1">
+                                      <span className={`text-xs font-semibold px-2 py-1 rounded ${
+                                        yoga.present 
+                                          ? yoga.strength === 'high' ? 'bg-green-200 text-green-800'
+                                            : yoga.strength === 'medium' ? 'bg-blue-200 text-blue-800'
+                                            : 'bg-gray-200 text-gray-800'
+                                          : 'bg-gray-200 text-gray-800'
+                                      }`}>
+                                        {yoga.present ? language === 'hi' ? 'मौजूद' : 'Present' : language === 'hi' ? 'अनुपस्थित' : 'Not Present'}
+                                      </span>
+                                      {yoga.influenceScore && yoga.influenceScore > 0 && (
+                                        <span className="text-xs font-bold text-blue-600">
+                                          {language === 'hi' ? 'प्रभाव' : 'Influence'}: {yoga.influenceScore}%
+                                        </span>
+                                      )}
+                                    </div>
                                   </div>
-                                  <p className={`mt-1 text-xs font-semibold ${yoga.present ? 'text-green-700' : 'text-gray-600'}`}>
-                                    {yoga.present ? (language === 'hi' ? 'मौजूद' : 'Present') : (language === 'hi' ? 'मौजूद नहीं' : 'Not Present')}
-                                  </p>
-                                  <p className="mt-1 text-xs text-gray-600">{yoga.description}</p>
                                 </div>
-                              ))
+                                {yoga.influenceScore && yoga.influenceScore > 0 && (
+                                  <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+                                    <div className="bg-blue-500 h-2 rounded-full transition-all" style={{ width: `${yoga.influenceScore}%` }}></div>
+                                  </div>
+                                )}
+                                <p className="text-sm text-gray-700">{yoga.description}</p>
+                              </div>
+                            ))}
+
+                          {chart.comprehensiveReport.yogas.filter((y) => !yogaPresentOnly || (y.present && (y.influenceScore ?? 0) > 40)).length === 0 && (
+                            <p className="text-sm text-gray-500">{language === 'hi' ? 'कोई प्रभावशाली योग नहीं पाया गया' : 'No influential yogas detected'}</p>
                           )}
                         </div>
                       </CardContent>
