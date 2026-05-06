@@ -39,6 +39,42 @@ async function buildPartner(details: MatchingRequest["boy"]): Promise<PartnerBir
   }
 }
 
+function compatibilityBand(score: number): string {
+  if (score >= 30) return "very strong"
+  if (score >= 24) return "strong"
+  if (score >= 18) return "moderate"
+  return "sensitive"
+}
+
+function buildDetailedAnalysis(milan: ReturnType<typeof calculateKundliMilan>) {
+  const strongest = [...milan.kootScores].sort((a, b) => b.score - a.score).slice(0, 2)
+  const weakest = [...milan.kootScores].sort((a, b) => a.score - b.score).slice(0, 2)
+
+  const summary =
+    `Total score is ${milan.totalScore}/36, which indicates ${compatibilityBand(milan.totalScore)} compatibility. ` +
+    `${milan.recommendation} Manglik assessment: ${milan.manglik.summary}.`
+
+  const strengths = strongest.map(
+    (item) => `${item.koot} contributed ${item.score}/${item.maxScore}, indicating support in this compatibility dimension.`,
+  )
+
+  const watchouts = weakest.map(
+    (item) => `${item.koot} is ${item.score}/${item.maxScore}, so this area may need conscious communication and adjustment.`,
+  )
+
+  const practicalGuidance =
+    milan.totalScore >= 24
+      ? "The match has a strong baseline. Focus on shared financial planning, family expectations, and long-term life goals to maximize harmony."
+      : "The match can still work with maturity. Prioritize communication style alignment, conflict resolution rules, and transparent expectations before major commitments."
+
+  return {
+    summary,
+    strengths,
+    watchouts,
+    practicalGuidance,
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const body = (await req.json()) as MatchingRequest
@@ -55,6 +91,7 @@ export async function POST(req: Request) {
       boy,
       girl,
       milan,
+      detailedAnalysis: buildDetailedAnalysis(milan),
       calculationBasis: "Ashtakoot (36 guna), Moon sign/nakshatra metrics, and Manglik parity",
     })
   } catch (err) {

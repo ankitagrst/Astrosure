@@ -150,6 +150,58 @@ export interface DashaPeriod {
   startDate: string
   endDate: string
   isCurrent: boolean
+  durationYears: number
+  phase: 'completed' | 'current' | 'upcoming'
+  progressPercent: number
+  focusArea: string
+  keyThemes: string[]
+  cautionAreas: string[]
+  antardashas: Array<{
+    planet: string
+    startDate: string
+    endDate: string
+    isCurrent: boolean
+    durationYears: number
+  }>
+}
+
+export interface YoginiDashaPeriod {
+  yogini: 'Mangala' | 'Pingala' | 'Dhanya' | 'Bhramari' | 'Bhadrika' | 'Ulka' | 'Siddha' | 'Sankata'
+  planet: string
+  startDate: string
+  endDate: string
+  isCurrent: boolean
+  durationYears: number
+  phase: 'completed' | 'current' | 'upcoming'
+  progressPercent: number
+  focusArea: string
+  keyThemes: string[]
+  cautionAreas: string[]
+}
+
+export interface AshtakavargaMatrix {
+  rows: Array<{
+    planet: string
+    bindus: number[]
+    total: number
+  }>
+  sarvashtakavarga: number[]
+  strongestHouse: number
+  weakestHouse: number
+}
+
+export interface CharaDashaPeriod {
+  signIndex: number
+  signName: string
+  startDate: string
+  endDate: string
+  isCurrent: boolean
+  durationYears: number
+  phase: 'completed' | 'current' | 'upcoming'
+  progressPercent: number
+  focusArea: string
+  keyThemes: string[]
+  cautionAreas: string[]
 }
 
 export interface Prediction {
@@ -185,12 +237,37 @@ export interface MonthlyHoroscope {
   focus: string
   advice: string
   caution: string
+  dashaInfluence?: string
+  lifeAreaTriggers?: string[]
+  practicalTips?: string[]
+}
+
+export interface QuarterlyForecast {
+  quarter: number
+  months: string
+  dashaContext: string
+  lifeAreaActivations: string[]
+  keyFocuses: string[]
+  warningAreas: string[]
+  actionItems: string[]
+  expectedOutcomes: string
 }
 
 export interface YearlyHoroscope {
   year: number
   overview: string
+  currentDashaYear: string
+  quarterly: QuarterlyForecast[]
   monthly: MonthlyHoroscope[]
+}
+
+export interface LifeAreaForecast {
+  area: 'Behavior' | 'Marriage' | 'Business' | 'Job' | 'Education' | 'Wealth'
+  score: number
+  influence: string
+  analysis: string
+  timing: string
+  upay: string[]
 }
 
 export interface ComprehensiveKundaliReport {
@@ -213,10 +290,14 @@ export interface ComprehensiveKundaliReport {
   planetaryStrengthening: PlanetaryStrengthening[]
   calculationModules: CalculationModuleStatus[]
   dashas: DashaPeriod[]
+  charaDashas: CharaDashaPeriod[]
+  yoginiDashas: YoginiDashaPeriod[]
+  ashtakavarga: AshtakavargaMatrix
   predictions: Prediction[]
   characterTraits: CharacterTrait[]
   spiritualGuidance: SpiritualGuidance
   yearlyHoroscope: YearlyHoroscope
+  lifeAreaForecasts: LifeAreaForecast[]
   remedies: string[]
   panchangDetails: {
     tithi: string
@@ -249,6 +330,22 @@ const VIMSHOTTARI_DASHA_ORDER = [
 
 const VIMSHOTTARI_CYCLE_YEARS = 120
 
+const YOGINI_DASHA_ORDER = [
+  { yogini: 'Mangala', years: 1, planet: 'Moon' },
+  { yogini: 'Pingala', years: 2, planet: 'Sun' },
+  { yogini: 'Dhanya', years: 3, planet: 'Jupiter' },
+  { yogini: 'Bhramari', years: 4, planet: 'Mars' },
+  { yogini: 'Bhadrika', years: 5, planet: 'Mercury' },
+  { yogini: 'Ulka', years: 6, planet: 'Saturn' },
+  { yogini: 'Siddha', years: 7, planet: 'Venus' },
+  { yogini: 'Sankata', years: 8, planet: 'Rahu' },
+] as const
+
+const SIGN_NAMES_EN = ['Aries', 'Taurus', 'Gemini', 'Cancer', 'Leo', 'Virgo', 'Libra', 'Scorpio', 'Sagittarius', 'Capricorn', 'Aquarius', 'Pisces']
+const SIGN_NAMES_HI = ['मेष', 'वृषभ', 'मिथुन', 'कर्क', 'सिंह', 'कन्या', 'तुला', 'वृश्चिक', 'धनु', 'मकर', 'कुंभ', 'मीन']
+
+const SIGN_LORDS_BY_INDEX = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'] as const
+
 export async function generateComprehensiveReport(
   name: string,
   dob: string,
@@ -277,12 +374,20 @@ export async function generateComprehensiveReport(
   const doshas = calculateDoshas(planets, houses, ascendant, latitude, longitude, timezone, language)
   const yogas = calculateYogas(planets, ascendant, language)
   const planetaryStrengthening = generatePlanetaryStrengthening(language)
-  const calculationModules = generateCalculationModulesStatus(language)
   const dashas = calculateDasha(planets, birthDate, language)
+  const charaDashas = calculateCharaDasha(planets, ascendant, birthDate, language)
+  const yoginiDashas = calculateYoginiDasha(planets, birthDate, language)
+  const ashtakavarga = calculateAshtakavarga(planets)
+  const calculationModules = generateCalculationModulesStatus(language, {
+    hasChara: charaDashas.length > 0,
+    hasYogini: yoginiDashas.length > 0,
+    hasAshtakavarga: ashtakavarga.rows.length > 0,
+  })
   const predictions = generatePredictions(planets, houses, ascendant, language)
   const characterTraits = analyzeCharacter(planets, houses, ascendant, language)
   const spiritualGuidance = generateSpiritualGuidance(planets, ascendant, doshas, language)
   const yearlyHoroscope = generateYearlyHoroscope(planets, dashas, language)
+  const lifeAreaForecasts = generateLifeAreaForecasts(planets, ascendant, dashas, doshas, language)
   const remedies = generateRemedies(doshas, planets, language)
   const panchangDetails = calculatePanchangData(birthDate, latitude, longitude, timezone, language)
   
@@ -306,10 +411,14 @@ export async function generateComprehensiveReport(
     planetaryStrengthening,
     calculationModules,
     dashas,
+    charaDashas,
+    yoginiDashas,
+    ashtakavarga,
     predictions,
     characterTraits,
     spiritualGuidance,
     yearlyHoroscope,
+    lifeAreaForecasts,
     remedies,
     panchangDetails: {
       tithi: panchangDetails.tithi,
@@ -379,11 +488,12 @@ function calculateDoshas(
   const mars = planets.find(p => p.planet === 'Mars')
   if (mars && [1, 2, 4, 7, 8, 12].includes(mars.house)) {
     const severity = mars.house === 7 ? 'high' : 'medium'
+    const marsDetail = `Mars in house ${mars.house} (${mars.signName || 'unknown sign'})`
     addDosha({
       name: 'Mangal Dosha',
       present: true,
       severity,
-      description: 'Mars is positioned in a house that creates Mangal Dosha, which can affect marital harmony.',
+      description: `${marsDetail} meets Mangal Dosha criteria (placement in 1,2,4,7,8,12). This placement can affect marital harmony and timing.`,
       remedies: [
         'Perform Kumbh Vivah (marriage with pot)',
         'Visit Hanuman temple on Tuesdays',
@@ -393,11 +503,14 @@ function calculateDoshas(
       type: 'Major',
     })
   } else {
+    const notDetectedDesc = mars
+      ? `Mars in house ${mars.house} (${mars.signName || 'unknown sign'}) does not form Mangal Dosha.`
+      : 'Mars position not available to evaluate Mangal Dosha.'
     addDosha({
       name: 'Mangal Dosha',
       present: false,
       severity: 'low',
-      description: 'Not detected in this birth chart.',
+      description: notDetectedDesc,
       remedies: [],
       type: 'Major',
     })
@@ -444,11 +557,12 @@ function calculateDoshas(
 
       const ksType = kaalSarpTypes[rahu.house] || 'Unknown'
 
+      const listed = classicalPlanets.map((p) => `${p.planet}(${p.house})`).join(', ')
       addDosha({
         name: 'Kaal Sarp Dosha',
         present: true,
         severity: 'high',
-        description: `All seven classical planets are between Rahu and Ketu axis. Type: ${ksType}.`,
+        description: `All classical planets (${listed}) fall between Rahu and Ketu axis. Detected type: ${ksType}.`,
         remedies: [
           'Perform Kaal Sarp Dosh Nivaran Puja',
           'Visit Trimurti temple',
@@ -458,11 +572,14 @@ function calculateDoshas(
         type: 'Major',
       })
     } else {
+      const classicalList = classicalPlanets.map((p) => `${p.planet}(${p.house})`).join(', ')
       addDosha({
         name: 'Kaal Sarp Dosha',
         present: false,
         severity: 'low',
-        description: 'Not detected in this birth chart.',
+        description: classicalList
+          ? `Classical planets (${classicalList}) are not grouped between Rahu and Ketu; Kaal Sarp Dosha not present.`
+          : 'Classical planetary data insufficient to confirm Kaal Sarp Dosha.',
         remedies: [],
         type: 'Major',
       })
@@ -504,11 +621,13 @@ function calculateDoshas(
       type: 'Major',
     })
   } else {
+    const checked = sun ? `Sun(${sun.house})` : 'Sun data unavailable'
+    const reason = (!rahu && !saturn && !mercury) ? `${checked} shows no close Rahu/Saturn conjunction or 5th/9th affliction.` : `${checked} lacks strong conjunction/affliction indicators for Pitra Dosha.`
     addDosha({
       name: 'Pitra Dosha',
       present: false,
       severity: 'low',
-      description: 'Not detected in this birth chart.',
+      description: reason,
       remedies: [],
       type: 'Major',
     })
@@ -532,8 +651,8 @@ function calculateDoshas(
     present: guruChandalPresent,
     severity: guruChandalPresent ? 'high' : 'low',
     description: guruChandalPresent
-      ? 'Jupiter is conjunct Rahu/Ketu and may distort judgment and ethics.'
-      : 'Not detected in this birth chart.',
+      ? `Jupiter(${jupiter!.house}) is conjunct Rahu/Ketu and may distort judgment and ethics.`
+      : (jupiter ? `Jupiter at house ${jupiter.house} (${jupiter.signName || 'unknown sign'}) is not conjunct Rahu/Ketu; Guru Chandal not detected.` : 'Jupiter data unavailable to evaluate Guru Chandal Dosha.'),
     remedies: guruChandalPresent
       ? [
           'Strengthen Jupiter through mantra and charity on Thursdays',
@@ -554,7 +673,7 @@ function calculateDoshas(
     severity: gandmoolPresent ? 'medium' : 'low',
     description: gandmoolPresent
       ? `Moon is in ${moon!.nakshatra}, which is a Gandmool nakshatra.`
-      : 'Not detected in this birth chart.',
+      : (moon ? `Moon is in ${moon.nakshatra || 'unknown nakshatra'} which is not a Gandmool nakshatra.` : 'Moon data unavailable to evaluate Gandmool Dosha.'),
     remedies: gandmoolPresent
       ? [
           'Perform Gandmool Shanti Puja',
@@ -586,7 +705,7 @@ function calculateDoshas(
         name: 'Shani Dosha',
         present: false,
         severity: 'low',
-        description: 'Not detected in this birth chart.',
+        description: saturn ? `Saturn at house ${saturn.house} (${saturn.signName || 'unknown sign'}) is not in a challenging house; Shani Dosha not present.` : 'Saturn data unavailable to evaluate Shani Dosha.',
         remedies: [],
         type: 'Minor',
       })
@@ -706,13 +825,14 @@ function calculateDoshas(
       (p) => !['Sun', 'Moon', 'Rahu', 'Ketu'].includes(p.planet) && [prevHouse, nextHouse].includes(p.house)
     )
     const kemadrumaPresent = neighbors.length === 0
+    const neighborList = neighbors.map((p) => `${p.planet} in house ${p.house} (${p.signName || 'unknown sign'})`).join(', ')
     addDosha({
       name: 'Kemadruma Dosha',
       present: kemadrumaPresent,
       severity: kemadrumaPresent ? 'high' : 'low',
       description: kemadrumaPresent
-        ? 'No qualifying planets found in the adjacent houses from Moon.'
-        : 'Not detected in this birth chart.',
+        ? `No non-luminary planets found in adjacent houses ${prevHouse} and ${nextHouse} from Moon (checked houses). This absence forms Kemadruma.`
+        : `Adjacent house planets found: ${neighborList || 'none'}. Kemadruma not present.`,
       remedies: kemadrumaPresent
         ? [
             'Strengthen Moon with mantra and fasting on Mondays',
@@ -742,7 +862,9 @@ function calculateDoshas(
     severity: grahanPresent ? 'high' : 'low',
     description: grahanPresent
       ? 'Sun or Moon is conjunct Rahu/Ketu, indicating eclipse-type affliction.'
-      : 'Not detected in this birth chart.',
+      : (sun || moon
+          ? `Checked Sun(${sun ? `${sun.planet}@house ${sun.house}` : 'N/A'}) and Moon(${moon ? `${moon.planet}@house ${moon.house}` : 'N/A'}) — no Rahu/Ketu conjunction found.`
+          : 'Sun/Moon data unavailable to evaluate Grahan Dosha.'),
     remedies: grahanPresent
       ? [
           'Recite Aditya Hridayam / Chandra mantra as applicable',
@@ -760,7 +882,9 @@ function calculateDoshas(
     severity: shrapitPresent ? 'high' : 'low',
     description: shrapitPresent
       ? 'Saturn and Rahu are conjunct, indicating Shrapit Dosha.'
-      : 'Not detected in this birth chart.',
+      : (saturn && rahu
+          ? `Saturn(${saturn.house}) and Rahu(${rahu.house}) are not conjunct; Shrapit Dosha not present.`
+          : 'Saturn/Rahu data unavailable to evaluate Shrapit Dosha.'),
     remedies: shrapitPresent
       ? [
           'Perform Shani-Rahu shanti puja',
@@ -783,7 +907,9 @@ function calculateDoshas(
     severity: chandraAfflicted ? 'medium' : 'low',
     description: chandraAfflicted
       ? 'Moon receives significant affliction from malefic conjunction.'
-      : 'Not detected in this birth chart.',
+      : (moon
+          ? `Moon at house ${moon.house} (${moon.nakshatra || 'unknown nakshatra'}) is not conjunct Saturn/Rahu/Ketu within defined orbs.`
+          : 'Moon data unavailable to evaluate Chandra Dosha.'),
     remedies: chandraAfflicted
       ? [
           'Strengthen Moon through fasting on Mondays',
@@ -895,19 +1021,25 @@ function generatePlanetaryStrengthening(language: Language = 'en'): PlanetaryStr
   ]
 }
 
-function generateCalculationModulesStatus(language: Language = 'en'): CalculationModuleStatus[] {
+function generateCalculationModulesStatus(
+  language: Language = 'en',
+  options?: { hasChara?: boolean; hasYogini?: boolean; hasAshtakavarga?: boolean }
+): CalculationModuleStatus[] {
   const text = (en: string, hi: string) => (language === 'hi' ? hi : en)
+  const hasChara = !!options?.hasChara
+  const hasYogini = !!options?.hasYogini
+  const hasAshtakavarga = !!options?.hasAshtakavarga
 
   return [
     { module: text('Main details', 'मुख्य विवरण'), status: 'calculated', note: text('DOB/TOB/place/coordinates/timezone computed.', 'जन्म विवरण, स्थान, निर्देशांक और टाइमज़ोन गणना में शामिल हैं।') },
     { module: text('Planetary positions', 'ग्रह स्थिति'), status: 'calculated', note: text('Sidereal longitudes with house, sign, nakshatra, retrograde status.', 'निरायण दीर्घांश, भाव, राशि, नक्षत्र और वक्री स्थिति सहित।') },
     { module: text('Lagna and Chandra chart', 'लग्न एवं चन्द्र कुण्डली'), status: 'calculated', note: text('Ascendant and Moon-based analysis is available.', 'लग्न और चंद्र-आधारित विश्लेषण उपलब्ध है।') },
     { module: text('Shodashvarga charts', 'शोडषवर्ग कुण्डलियाँ'), status: 'partial', note: text('D1/D2/D3/D7/D9/D10/D12/D16/D60 currently computed.', 'अभी D1/D2/D3/D7/D9/D10/D12/D16/D60 गणना में हैं।') },
-    { module: text('Vimshottari dasha', 'विंशोत्तरी दशा'), status: 'calculated', note: text('Mahadasha timeline and current dasha are computed.', 'महादशा टाइमलाइन और वर्तमान दशा गणना की जाती है।') },
-    { module: text('Chara dasha', 'चरदशा'), status: 'pending', note: text('Not yet implemented in current engine.', 'वर्तमान इंजन में अभी लागू नहीं है।') },
-    { module: text('Yogini dasha', 'योगिनी दशा'), status: 'pending', note: text('Not yet implemented in current engine.', 'वर्तमान इंजन में अभी लागू नहीं है।') },
+    { module: text('Vimshottari dasha', 'विंशोत्तरी दशा'), status: 'calculated', note: text('Mahadasha, antardasha, phase, progress and active windows are computed dynamically.', 'महादशा, अंतरदशा, चरण, प्रगति और सक्रिय अवधि डायनेमिक रूप से गणना की जाती है।') },
+    { module: text('Chara dasha', 'चरदशा'), status: hasChara ? 'calculated' : 'pending', note: hasChara ? text('Jaimini-style Chara dasha sign periods are calculated from Lagna and sign lords.', 'लग्न और राशि स्वामी आधारित जैमिनी शैली चरदशा अवधि गणना की जाती है।') : text('Not yet implemented in current engine.', 'वर्तमान इंजन में अभी लागू नहीं है।') },
+    { module: text('Yogini dasha', 'योगिनी दशा'), status: hasYogini ? 'calculated' : 'pending', note: hasYogini ? text('Yogini dasha timeline and active period are computed dynamically from Moon nakshatra.', 'चंद्र नक्षत्र से योगिनी दशा टाइमलाइन और सक्रिय अवधि डायनेमिक रूप से गणना होती है।') : text('Not yet implemented in current engine.', 'वर्तमान इंजन में अभी लागू नहीं है।') },
     { module: text('Lal Kitab dasha and worksheets', 'लाल किताब दशा व वर्कशीट'), status: 'pending', note: text('Dedicated Lal Kitab calculation layer is pending.', 'अलग लाल किताब गणना लेयर अभी लंबित है।') },
-    { module: text('Ashtakavarga / Prastara Ashtakavarga', 'अष्टकवर्ग / प्रस्तरअष्टकवर्ग'), status: 'pending', note: text('Ashtakavarga bindu matrix not yet computed.', 'अष्टकवर्ग बिंदु मैट्रिक्स अभी गणना में नहीं है।') },
+    { module: text('Ashtakavarga / Prastara Ashtakavarga', 'अष्टकवर्ग / प्रस्तरअष्टकवर्ग'), status: hasAshtakavarga ? 'calculated' : 'pending', note: hasAshtakavarga ? text('Ashtakavarga bindu matrix and Sarvashtakavarga are computed from live planetary houses.', 'अष्टकवर्ग बिंदु मैट्रिक्स और सर्वाष्टकवर्ग जीवंत ग्रह-भाव स्थिति से गणना होते हैं।') : text('Ashtakavarga bindu matrix not yet computed.', 'अष्टकवर्ग बिंदु मैट्रिक्स अभी गणना में नहीं है।') },
     { module: text('Bhavmadhya and KP cusp aspects', 'भावमध्य और केपी संधि दृष्टि'), status: 'pending', note: text('KP cusp and bhava-madhya aspect engine pending.', 'केपी संधि और भावमध्य दृष्टि इंजन लंबित है।') },
     { module: text('Western aspects', 'ग्रह दृष्टि (पाश्चात्य)'), status: 'partial', note: text('Limited 7th/aspect relationships are used in yoga detection.', 'योग पहचान में सीमित दृष्टि-संबंध उपयोग हो रहे हैं।') },
     { module: text('Shadbala and Bhavabala', 'षडबल एवं भावबल'), status: 'pending', note: text('Numerical bala computation module is pending.', 'संख्यात्मक बल गणना मॉड्यूल अभी लंबित है।') },
@@ -1373,7 +1505,7 @@ function generateYearlyHoroscope(
   language: Language = 'en'
 ): YearlyHoroscope {
   const year = new Date().getFullYear()
-  const months = language === 'hi' ? [
+  const monthNames = language === 'hi' ? [
     'जनवरी', 'फरवरी', 'मार्च', 'अप्रैल', 'मई', 'जून',
     'जुलाई', 'अगस्त', 'सितंबर', 'अक्टूबर', 'नवंबर', 'दिसंबर',
   ] : [
@@ -1381,43 +1513,292 @@ function generateYearlyHoroscope(
     'July', 'August', 'September', 'October', 'November', 'December',
   ]
 
-  const currentDasha = dashas.find((d) => d.isCurrent)?.planet ?? dashas[0]?.planet ?? 'Jupiter'
-  const careerSupport = planets.some((p) => p.house === 10)
-  const financeSupport = planets.some((p) => p.house === 2 || p.house === 11)
-  const relationshipSensitivity = planets.some((p) => p.house === 7 || p.house === 8)
+  const currentDasha = dashas.find((d) => d.isCurrent)
+  const currentDashaPlanet = currentDasha?.planet ?? 'Jupiter'
+  const nextDasha = dashas[dashas.findIndex((d) => d.isCurrent) + 1]
+  
+  const sun = planets.find((p) => p.planet === 'Sun')
+  const venus = planets.find((p) => p.planet === 'Venus')
+  const jupiter = planets.find((p) => p.planet === 'Jupiter')
 
-  const overview = language === 'hi'
-    ? `${year} में आपकी कुंडली ${localizePlanetName(currentDasha, language)} प्रभाव वाला वर्ष दर्शाती है, जिसमें ${careerSupport ? 'कैरियर में गति' : 'कैरियर में स्थिर प्रगति'} और ${financeSupport ? 'लाभ के अवसर' : 'सावधानीपूर्वक आर्थिक प्रबंधन'} दिखाई देता है।`
-    : `For ${year}, your chart shows a ${currentDasha}-influenced year with ${careerSupport ? 'career momentum' : 'steady career growth'} and ${financeSupport ? 'opportunities for gains' : 'careful money management requirements'}.`
+  const careerStrength = (planets.filter((p) => p.house === 10).length || 0) + (sun?.house === 10 ? 2 : 0)
+  const financeStrength = (planets.filter((p) => p.house === 2 || p.house === 11).length || 0) + (jupiter?.house === 2 || jupiter?.house === 11 ? 2 : 0)
+  const relationshipStrength = (planets.filter((p) => p.house === 7).length || 0) + (venus?.house === 7 ? 2 : 0)
 
-  const monthly: MonthlyHoroscope[] = months.map((month, index) => {
-    const quarter = Math.floor(index / 3)
-    const focus = quarter === 0
-      ? (language === 'hi' ? 'योजना और नींव निर्माण' : 'Planning and foundation building')
-      : quarter === 1
-      ? (language === 'hi' ? 'क्रियान्वयन और दृश्यता' : 'Execution and visibility')
-      : quarter === 2
-      ? (language === 'hi' ? 'समेकन और वित्त' : 'Consolidation and finances')
-      : (language === 'hi' ? 'परिणाम, समापन और नवीकरण' : 'Results, closure and renewal')
+  const baseOverview = language === 'hi'
+    ? `${year} में ${localizePlanetName(currentDashaPlanet, language)} दशा आपके जीवन के महत्वपूर्ण क्षेत्रों को सक्रिय करेगी। ${careerStrength >= 2 ? 'कैरियर में नई दिशा' : 'कैरियर में स्थिर प्रगति'}, ${financeStrength >= 2 ? 'आर्थिक लाभ के मौके' : 'वित्तीय सावधानी'} और ${relationshipStrength >= 2 ? 'रिश्तों में नई गहराई' : 'संबंधों में संतुलन'} दिखाई दे रहे हैं।`
+    : `In ${year}, ${currentDashaPlanet} dasha will activate important life areas. Watch for ${careerStrength >= 2 ? 'new career directions' : 'steady professional growth'}, ${financeStrength >= 2 ? 'financial opportunities' : 'careful money management'}, and ${relationshipStrength >= 2 ? 'deeper connections' : 'balanced relationships'}.`
 
-    const advice = language === 'hi'
-      ? `${month}: ${quarter === 1 ? 'कैरियर कार्यों और संवाद' : quarter === 2 ? 'वित्तीय अनुशासन और बचत' : 'संरचित निर्णयों'} को प्राथमिकता दें और दीर्घकालिक लक्ष्यों से जुड़े रहें।`
-      : `${month}: Prioritize ${quarter === 1 ? 'career actions and communication' : quarter === 2 ? 'financial discipline and savings' : 'structured decisions'} while staying aligned with your long-term goals.`
+  // Generate quarterly forecasts with detailed dasha context
+  const quarterly: QuarterlyForecast[] = [
+    {
+      quarter: 1,
+      months: language === 'hi' ? 'जनवरी - मार्च (Q1)' : 'January - March (Q1)',
+      dashaContext: language === 'hi'
+        ? `${localizePlanetName(currentDashaPlanet, language)} दशा के प्रारंभिक प्रभाव को समझें और नई शुरुआत करें।`
+        : `Understand initial ${currentDashaPlanet} dasha impulses; lay foundations for the year.`,
+      lifeAreaActivations: language === 'hi'
+        ? [
+            'नई योजनाओं का निर्माण (विचार-विमर्श, ब्लूप्रिंटिंग)',
+            'पुरानी परिस्थितियों से मुक्ति के संकेत',
+            'संबंध और सामाजिक जुड़ाव में गतिविधि',
+          ]
+        : [
+            'Foundation-building for major projects (planning, research)',
+            'Clearing of old patterns or obstacles',
+            'Social and relationship activations',
+          ],
+      keyFocuses: language === 'hi'
+        ? [
+            'स्पष्ट लक्ष्य निर्धारण और रणनीति बनाएं',
+            'पुरानी प्रतिबद्धताओं की समीक्षा करें',
+            'नई कौशल सीखना शुरू करें',
+          ]
+        : [
+            'Set clear goals and strategy',
+            'Review old commitments',
+            'Begin skill-building in targeted areas',
+          ],
+      warningAreas: language === 'hi'
+        ? [
+            'जल्दबाजी में बड़े निर्णय न लें',
+            'अनिश्चितता के दौरान खर्च बढ़ाने से बचें',
+            relationshipStrength < 1 ? 'संवाद कमजोर न होने दें' : 'सावधानीपूर्वक संचार रखें',
+          ]
+        : [
+            'Avoid hasty major decisions',
+            'Control spending during uncertainty',
+            relationshipStrength < 1 ? 'Maintain active communication' : 'Be mindful of tone in dealings',
+          ],
+      actionItems: language === 'hi'
+        ? [
+            'नई परियोजनाएं शुरू करने से पहले सलाह लें',
+            'व्यक्तिगत स्वास्थ्य जांच करवाएं',
+            'परिवार के साथ समय बिताएं',
+          ]
+        : [
+            'Seek advice before major launches',
+            'Get personal health check-ups',
+            'Spend quality time with family',
+          ],
+      expectedOutcomes: language === 'hi'
+        ? 'पहली तिमाही की सफलता पूरे साल की नींव तैयार करेगी। स्पष्टता और धैर्य से आप सही दिशा पकड़ सकते हैं।'
+        : 'Q1 clarity and groundwork will set the tone for the entire year. Patience and planning are your allies.',
+    },
+    {
+      quarter: 2,
+      months: language === 'hi' ? 'अप्रैल - जून (Q2)' : 'April - June (Q2)',
+      dashaContext: language === 'hi'
+        ? `${localizePlanetName(currentDashaPlanet, language)} दशा का विकासशील चरण - कार्यान्वयन और दृश्यता का समय।`
+        : `Flowering of ${currentDashaPlanet} dasha - implementation and visibility phase begins.`,
+      lifeAreaActivations: language === 'hi'
+        ? [
+            careerStrength >= 2 ? 'कैरियर में नई भूमिका या पहचान' : 'कैरियर में दृश्यता बढ़ेगी',
+            financeStrength >= 2 ? 'आय के नए स्रोत सामने आएंगे' : 'आर्थिक स्थिरता की अवधि',
+            'संचार कौशल का असर दिखने लगेगा',
+          ]
+        : [
+            careerStrength >= 2 ? 'New role or recognition in career' : 'Increased career visibility',
+            financeStrength >= 2 ? 'New income opportunities emerge' : 'Financial stabilization phase',
+            'Communication skills become influential',
+          ],
+      keyFocuses: language === 'hi'
+        ? [
+            'सक्रिय रूप से अपनी मेहनत दिखाएं',
+            'नेटवर्किंग पर बल दें',
+            'वित्तीय अनुशासन बनाए रखें',
+          ]
+        : [
+            'Display your work actively',
+            'Invest in networking and visibility',
+            'Maintain financial discipline',
+          ],
+      warningAreas: language === 'hi'
+        ? [
+            'अहंकार से सावधान रहें',
+            relationshipStrength < 1 ? 'रिश्तों में अति-आशावाद न रखें' : 'भावनात्मक निर्णय न लें',
+            'बहुत सारी प्रतिबद्धताओं न लें',
+          ]
+        : [
+            'Guard against overconfidence',
+            relationshipStrength < 1 ? 'Avoid unrealistic expectations' : 'Do not make emotional decisions',
+            'Avoid overcommitting to multiple initiatives',
+          ],
+      actionItems: language === 'hi'
+        ? [
+            'सामने आने की शक्ति का प्रयोग करें',
+            'साथियों को स्वीकार दिखाएं',
+            'मासिक बजट समीक्षा करें',
+          ]
+        : [
+            'Leverage your momentum',
+            'Show appreciation to allies',
+            'Review monthly finances',
+          ],
+      expectedOutcomes: language === 'hi'
+        ? 'दूसरी तिमाही आपके प्रयासों को बाहर लाएगी। पहचान और सफलता की ओर कदम बढ़ेंगे।'
+        : 'Q2 brings your efforts into the spotlight. Progress and recognition move forward significantly.',
+    },
+    {
+      quarter: 3,
+      months: language === 'hi' ? 'जुलाई - सितंबर (Q3)' : 'July - September (Q3)',
+      dashaContext: language === 'hi'
+        ? `${localizePlanetName(currentDashaPlanet, language)} दशा का शिखर चरण - समेकन, वित्त और चिंतन।`
+        : `Peak of ${currentDashaPlanet} dasha - consolidation, finances, and reflection phase.`,
+      lifeAreaActivations: language === 'hi'
+        ? [
+            financeStrength >= 2 ? 'लाभ का सीधा फसल काटने का समय' : 'सावधानीपूर्वक बचत और निवेश',
+            relationshipStrength >= 2 ? 'गहरे संबंध और प्रतिबद्धताएं' : 'संबंधों में स्पष्टता',
+            'आत्मचिंतन और अंतर्दृष्टि का समय',
+          ]
+        : [
+            financeStrength >= 2 ? 'Direct harvesting of gains' : 'Careful savings and investments',
+            relationshipStrength >= 2 ? 'Deeper bonds and commitments form' : 'Clarity in relationships',
+            'Self-reflection and inner insights emerge',
+          ],
+      keyFocuses: language === 'hi'
+        ? [
+            'परिणामों को समेकित करें और दस्तावेज बनाएं',
+            'लाभ पर पुनः विचार करें',
+            'भविष्य की योजना के लिए समय निकालें',
+          ]
+        : [
+            'Consolidate results and document progress',
+            'Review gains and allocate wisely',
+            'Make time for future planning',
+          ],
+      warningAreas: language === 'hi'
+        ? [
+            'अत्यधिक खर्च या जोखिम भरे निवेश से बचें',
+            'विश्लेषण पंग्ति (paralysis) से बचें',
+            'पारिवारिक संघर्ष की निगरानी करें',
+          ]
+        : [
+            'Avoid excessive spending or risky bets',
+            'Do not fall into analysis paralysis',
+            'Monitor family dynamics closely',
+          ],
+      actionItems: language === 'hi'
+        ? [
+            'वर्ष के मध्य समीक्षा करें',
+            'स्वास्थ्य और कल्याण पर ध्यान दें',
+            'अनपूर्ण कार्य पूरा करें',
+          ]
+        : [
+            'Conduct mid-year review',
+            'Focus on health and wellness',
+            'Complete pending tasks',
+          ],
+      expectedOutcomes: language === 'hi'
+        ? 'तीसरी तिमाही में आप परिणाम देखेंगे और अगले चरण की योजना बनाएंगे। समेकन की अवधि शांति और स्पष्टता लाएगी।'
+        : 'Q3 shows results and enables planning. Consolidation brings peace and strategic clarity.',
+    },
+    {
+      quarter: 4,
+      months: language === 'hi' ? 'अक्टूबर - दिसंबर (Q4)' : 'October - December (Q4)',
+      dashaContext: language === 'hi'
+        ? `${localizePlanetName(currentDashaPlanet, language)} दशा का समापन चरण - परिणाम, नवीकरण और नई शुरुआत की तैयारी।`
+        : `Final phase of ${currentDashaPlanet} dasha - results, renewal, and preparation for next cycle.`,
+      lifeAreaActivations: language === 'hi'
+        ? [
+            'वर्ष की परिणति और पाठ सीखना',
+            nextDasha ? `${localizePlanetName(nextDasha.planet, language)} दशा के आगमन का संकेत` : 'आगामी चक्र की ऊर्जा का अनुभव',
+            'परिवार और रिश्ते नए मोड़ पर',
+          ]
+        : [
+            'Year comes to fruition; lessons integrate',
+            nextDasha ? `Signs of ${nextDasha.planet} dasha arrival` : 'Energy of incoming cycle begins',
+            'Family and relationships reach new phase',
+          ],
+      keyFocuses: language === 'hi'
+        ? [
+            'कृतज्ञता और जिम्मेदारी के साथ बंद करें',
+            'सीखे गए पाठों को नोट करें',
+            'अगले चक्र के लिए तैयार करें',
+          ]
+        : [
+            'Close with gratitude and responsibility',
+            'Document lessons learned',
+            'Prepare for the next cycle',
+          ],
+      warningAreas: language === 'hi'
+        ? [
+            'अधूरे काम को जल्दबाजी में खत्म न करें',
+            'भविष्य की चिंता न करें',
+            'इस समय संघर्ष सामान्य है - सह्य रहें',
+          ]
+        : [
+            'Do not rush incomplete work',
+            'Do not worry excessively about future',
+            'Tensions now are normal - stay patient',
+          ],
+      actionItems: language === 'hi'
+        ? [
+            'वर्ष की पूरी समीक्षा करें',
+            'आभार प्रकट करें और उपहार दें',
+            'आध्यात्मिक अभ्यास को मजबूत करें',
+          ]
+        : [
+            'Conduct full year review',
+            'Express gratitude and give gifts',
+            'Strengthen spiritual practices',
+          ],
+      expectedOutcomes: language === 'hi'
+        ? `चौथी तिमाही आपको वर्ष की यात्रा पर प्रतिबिंबित करने का समय देगी। ${nextDasha ? `${localizePlanetName(nextDasha.planet, language)} दशा में नई संभावनाएं खुलेंगी।` : 'नए अवसर क्षितिज पर दिख रहे हैं।'}`
+        : `Q4 provides time for reflection and closure. ${nextDasha ? `New possibilities await in ${nextDasha.planet} dasha.` : 'New horizons are visible ahead.'}`,
+    },
+  ]
 
-    const caution = relationshipSensitivity && (index === 4 || index === 9)
-      ? (language === 'hi'
-        ? `${month}: अहंकार या अधीरता से उत्पन्न संबंध विवादों से बचें।`
-        : `${month}: Avoid relationship conflicts triggered by ego or impatience.`)
-      : (language === 'hi'
-        ? `${month}: अति-प्रतिबद्धता और जल्दबाजी में निर्णय लेने से बचें।`
-        : `${month}: Avoid overcommitment and rushed decisions.`)
+  // Generate detailed monthly horoscopes
+  const monthly: MonthlyHoroscope[] = monthNames.map((month, index) => {
+    const quarterIndex = Math.floor(index / 3)
+    const monthInQuarter = index % 3
+    const q = quarterly[quarterIndex]
 
-    return { month, focus, advice, caution }
+    const dashaInfluenceTexts = [
+      language === 'hi'
+        ? `${month}: ${q.dashaContext}में ${month} महत्वपूर्ण शुरुआत का महीना है।`
+        : `${month}: ${q.dashaContext} ${month} is crucial for new beginnings.`,
+      language === 'hi'
+        ? `${month}: ${q.dashaContext}में ${month} में कार्यान्वयन के संकेत।`
+        : `${month}: ${q.dashaContext} ${month} brings implementation signals.`,
+      language === 'hi'
+        ? `${month}: समेकन का समय - ${month} में लाभों का मूल्यांकन करें।`
+        : `${month}: Consolidation time - review gains in ${month}.`,
+    ]
+
+    const pracicalTips = [
+      language === 'hi'
+        ? ['योजना बनाएं और मार्गदर्शन लें', 'सामाजिक संबंध मजबूत करें', 'स्वास्थ्य जांच करवाएं']
+        : ['Plan and seek guidance', 'Strengthen social bonds', 'Get health checkups'],
+      language === 'hi'
+        ? ['अपने कार्य को सामने लाएं', 'नेटवर्क का विस्तार करें', 'वित्तीय अनुशासन रखें']
+        : ['Bring your work to the fore', 'Expand your network', 'Maintain financial discipline'],
+      language === 'hi'
+        ? ['परिणामों को दस्तावेज करें', 'पुनर्मूल्यांकन करें', 'भविष्य की योजना बनाएं']
+        : ['Document results', 'Re-evaluate progress', 'Plan ahead'],
+    ]
+
+    return {
+      month,
+      focus: q.keyFocuses[monthInQuarter] ?? q.keyFocuses[0],
+      dashaInfluence: dashaInfluenceTexts[monthInQuarter],
+      lifeAreaTriggers: q.lifeAreaActivations,
+      practicalTips: pracicalTips[quarterIndex],
+      advice: language === 'hi'
+        ? `${month}: ${q.expectedOutcomes.split('।')[0]}`
+        : `${month}: ${q.expectedOutcomes.split('.')[0]}.`,
+      caution: q.warningAreas[monthInQuarter] ?? q.warningAreas[0],
+    }
   })
 
   return {
     year,
-    overview,
+    overview: baseOverview,
+    currentDashaYear: language === 'hi'
+      ? `${localizePlanetName(currentDashaPlanet, language)} दशा (${currentDasha?.startDate} से ${currentDasha?.endDate} तक)`
+      : `${currentDashaPlanet} Dasha (${currentDasha?.startDate} to ${currentDasha?.endDate})`,
+    quarterly,
     monthly,
   }
 }
@@ -1442,6 +1823,61 @@ function calculateDasha(planets: PlanetPosition[], birthDate: Date, _language: L
     return new Date(date.getTime() + years * msPerYear)
   }
 
+  const toDateString = (date: Date): string => date.toISOString().split('T')[0]
+
+  const yearsBetween = (start: Date, end: Date): number => {
+    const value = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)
+    return Math.max(0, Math.round(value * 100) / 100)
+  }
+
+  const dashaPlanetThemes: Record<string, { focus: string; key: string[]; caution: string[] }> = {
+    Sun: {
+      focus: 'Career authority and public visibility',
+      key: ['Leadership decisions', 'Government/administrative matters', 'Father/mentor dynamics'],
+      caution: ['Ego clashes', 'Overexertion and burnout'],
+    },
+    Moon: {
+      focus: 'Emotional wellbeing and family anchors',
+      key: ['Mental balance and routines', 'Home/mother themes', 'Public receptivity'],
+      caution: ['Mood volatility', 'Emotional decision making'],
+    },
+    Mars: {
+      focus: 'Initiative, conflict handling and execution speed',
+      key: ['Competitive progress', 'Land/property effort', 'Courage and self-assertion'],
+      caution: ['Impulsiveness', 'Arguments and accidents'],
+    },
+    Mercury: {
+      focus: 'Learning, trade, communication and analytics',
+      key: ['Business negotiation', 'Skill upgrades', 'Documentation and contracts'],
+      caution: ['Overthinking', 'Miscommunication'],
+    },
+    Jupiter: {
+      focus: 'Growth, wisdom, guidance and finance expansion',
+      key: ['Mentorship and teaching', 'Marriage/family support', 'Ethical opportunities'],
+      caution: ['Over-optimism', 'Complacency in planning'],
+    },
+    Venus: {
+      focus: 'Relationships, comforts, creativity and wealth refinement',
+      key: ['Marriage harmony', 'Luxury/asset building', 'Artistic output'],
+      caution: ['Indulgence', 'Relationship dependence'],
+    },
+    Saturn: {
+      focus: 'Discipline, karmic work, duty and long-term stability',
+      key: ['Career structure', 'Sustained effort', 'Debt/liability correction'],
+      caution: ['Delays and pressure', 'Isolation or pessimism'],
+    },
+    Rahu: {
+      focus: 'Material ambition, unconventional growth and foreign links',
+      key: ['Technology/global opportunities', 'Rapid shifts', 'Network expansion'],
+      caution: ['Confusion and obsession', 'Risky shortcuts'],
+    },
+    Ketu: {
+      focus: 'Detachment, inner work and karmic closure',
+      key: ['Spiritual discipline', 'Research and introspection', 'Past-pattern release'],
+      caution: ['Sudden separations', 'Directionlessness if ungrounded'],
+    },
+  }
+
   const lifeEndDate = addYears(birthDate, VIMSHOTTARI_CYCLE_YEARS)
   let startDate = new Date(birthDate)
   let sequenceIndex = dashaStartIndex
@@ -1457,12 +1893,60 @@ function calculateDasha(planets: PlanetPosition[], birthDate: Date, _language: L
     const endDate = rawEndDate > lifeEndDate ? lifeEndDate : rawEndDate
     
     const isCurrent = currentDate >= startDate && currentDate < endDate
+
+    const phase: 'completed' | 'current' | 'upcoming' = isCurrent
+      ? 'current'
+      : currentDate >= endDate
+        ? 'completed'
+        : 'upcoming'
+
+    const durationYears = yearsBetween(startDate, endDate)
+    const progressPercent = phase === 'completed'
+      ? 100
+      : phase === 'upcoming'
+        ? 0
+        : Math.max(0, Math.min(100, Math.round((((currentDate.getTime() - startDate.getTime()) / Math.max(1, endDate.getTime() - startDate.getTime())) * 100))))
+
+    const theme = dashaPlanetThemes[maha.planet] ?? {
+      focus: 'General life activation and karmic movement',
+      key: ['Execution and consistency', 'Family and financial balance'],
+      caution: ['Unplanned decisions', 'Ignoring health routines'],
+    }
+
+    const mahaIndex = VIMSHOTTARI_DASHA_ORDER.findIndex((item) => item.planet === maha.planet)
+    const antardashas: DashaPeriod['antardashas'] = []
+    let antarStart = new Date(startDate)
+
+    for (let k = 0; k < VIMSHOTTARI_DASHA_ORDER.length && antarStart < endDate; k++) {
+      const antar = VIMSHOTTARI_DASHA_ORDER[(mahaIndex + k) % VIMSHOTTARI_DASHA_ORDER.length]
+      const antarYears = years * (antar.years / VIMSHOTTARI_CYCLE_YEARS)
+      const antarRawEnd = addYears(antarStart, antarYears)
+      const antarEnd = k === VIMSHOTTARI_DASHA_ORDER.length - 1 || antarRawEnd > endDate ? endDate : antarRawEnd
+      const antarCurrent = currentDate >= antarStart && currentDate < antarEnd
+
+      antardashas.push({
+        planet: antar.planet,
+        startDate: toDateString(antarStart),
+        endDate: toDateString(antarEnd),
+        isCurrent: antarCurrent,
+        durationYears: yearsBetween(antarStart, antarEnd),
+      })
+
+      antarStart = antarEnd
+    }
     
     dashas.push({
       planet: maha.planet,
-      startDate: startDate.toISOString().split('T')[0],
-      endDate: endDate.toISOString().split('T')[0],
+      startDate: toDateString(startDate),
+      endDate: toDateString(endDate),
       isCurrent,
+      durationYears,
+      phase,
+      progressPercent,
+      focusArea: theme.focus,
+      keyThemes: theme.key,
+      cautionAreas: theme.caution,
+      antardashas,
     })
     
     startDate = endDate
@@ -1473,82 +1957,312 @@ function calculateDasha(planets: PlanetPosition[], birthDate: Date, _language: L
   return dashas
 }
 
-function generatePredictions(planets: PlanetPosition[], _houses: number[], _ascendant: PlanetPosition, language: Language = 'en'): Prediction[] {
+function calculateYoginiDasha(planets: PlanetPosition[], birthDate: Date, _language: Language = 'en'): YoginiDashaPeriod[] {
+  const dashas: YoginiDashaPeriod[] = []
+  const currentDate = new Date()
+  const moon = planets.find((p) => p.planet === 'Moon')
+
+  if (!moon) return dashas
+
+  const addYears = (date: Date, years: number): Date => {
+    const msPerYear = 365.2425 * 24 * 60 * 60 * 1000
+    return new Date(date.getTime() + years * msPerYear)
+  }
+
+  const toDateString = (date: Date): string => date.toISOString().split('T')[0]
+  const yearsBetween = (start: Date, end: Date): number => {
+    const value = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)
+    return Math.max(0, Math.round(value * 100) / 100)
+  }
+
+  const nakshatraSize = 360 / 27
+  const nakshatraIndex = Math.floor(moon.longitude / nakshatraSize)
+  const progressedInNakshatra = (moon.longitude % nakshatraSize) / nakshatraSize
+  const startIndex = nakshatraIndex % YOGINI_DASHA_ORDER.length
+
+  const themes: Record<string, { focus: string; key: string[]; caution: string[] }> = {
+    Mangala: { focus: 'Initiation, courage and quick decisions', key: ['Momentum for new starts', 'Willpower and self-drive'], caution: ['Impulsiveness', 'Conflict reactions'] },
+    Pingala: { focus: 'Authority, recognition and visibility', key: ['Career spotlight', 'Leadership opportunities'], caution: ['Ego conflicts', 'Overcommitment'] },
+    Dhanya: { focus: 'Growth, wisdom and supportive expansion', key: ['Learning and mentor support', 'Fortune-linked gains'], caution: ['Over-optimism', 'Loose planning'] },
+    Bhramari: { focus: 'Action, competition and execution pressure', key: ['Performance push', 'Operational drive'], caution: ['Burnout risk', 'Argumentative tone'] },
+    Bhadrika: { focus: 'Intellect, communication and business flow', key: ['Trade and negotiation', 'Skill enhancement'], caution: ['Over-analysis', 'Mixed signals'] },
+    Ulka: { focus: 'Discipline, karmic tests and restructuring', key: ['Long-term correction', 'Duty and consistency'], caution: ['Delays', 'Mental heaviness'] },
+    Siddha: { focus: 'Fulfilment, relationships and comforts', key: ['Harmony and refinement', 'Creative opportunities'], caution: ['Indulgence', 'Dependency patterns'] },
+    Sankata: { focus: 'Uncertainty management and transformation', key: ['Breakthrough through change', 'Nonlinear opportunities'], caution: ['Confusion', 'Risk-prone decisions'] },
+  }
+
+  const lifeEndDate = addYears(birthDate, 108)
+  let startDate = new Date(birthDate)
+  let sequenceIndex = startIndex
+  let isFirst = true
+
+  while (startDate < lifeEndDate) {
+    const yogini = YOGINI_DASHA_ORDER[sequenceIndex]
+    const years = isFirst ? yogini.years * (1 - progressedInNakshatra) : yogini.years
+    const rawEndDate = addYears(startDate, years)
+    const endDate = rawEndDate > lifeEndDate ? lifeEndDate : rawEndDate
+    const isCurrent = currentDate >= startDate && currentDate < endDate
+    const phase: 'completed' | 'current' | 'upcoming' = isCurrent ? 'current' : currentDate >= endDate ? 'completed' : 'upcoming'
+    const durationYears = yearsBetween(startDate, endDate)
+    const progressPercent = phase === 'completed'
+      ? 100
+      : phase === 'upcoming'
+        ? 0
+        : Math.max(0, Math.min(100, Math.round((((currentDate.getTime() - startDate.getTime()) / Math.max(1, endDate.getTime() - startDate.getTime())) * 100))))
+
+    const t = themes[yogini.yogini]
+    dashas.push({
+      yogini: yogini.yogini,
+      planet: yogini.planet,
+      startDate: toDateString(startDate),
+      endDate: toDateString(endDate),
+      isCurrent,
+      durationYears,
+      phase,
+      progressPercent,
+      focusArea: t.focus,
+      keyThemes: t.key,
+      cautionAreas: t.caution,
+    })
+
+    startDate = endDate
+    sequenceIndex = (sequenceIndex + 1) % YOGINI_DASHA_ORDER.length
+    isFirst = false
+  }
+
+  return dashas
+}
+
+function calculateAshtakavarga(planets: PlanetPosition[]): AshtakavargaMatrix {
+  const classical = planets.filter((p) => ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'].includes(p.planet))
+  const beneficOffsets: Record<string, number[]> = {
+    Sun: [1, 2, 4, 7, 8, 9, 10, 11],
+    Moon: [1, 3, 6, 7, 10, 11],
+    Mars: [1, 2, 4, 7, 8, 10, 11],
+    Mercury: [1, 2, 4, 5, 6, 8, 9, 10, 11],
+    Jupiter: [1, 2, 4, 5, 6, 7, 9, 10, 11],
+    Venus: [1, 2, 3, 4, 5, 8, 9, 11, 12],
+    Saturn: [3, 5, 6, 10, 11],
+  }
+
+  const rows = classical.map((planet) => {
+    const allowed = beneficOffsets[planet.planet] ?? []
+    const bindus: number[] = Array.from({ length: 12 }, (_, idx) => {
+      const house = idx + 1
+      const distance = ((house - planet.house + 12) % 12) + 1
+      return allowed.includes(distance) ? 1 : 0
+    })
+    const total = bindus.reduce((sum, value) => sum + value, 0)
+    return { planet: planet.planet, bindus, total }
+  })
+
+  const sarvashtakavarga = Array.from({ length: 12 }, (_, idx) => rows.reduce((sum, row) => sum + row.bindus[idx], 0))
+
+  let strongestHouse = 1
+  let weakestHouse = 1
+  sarvashtakavarga.forEach((value, idx) => {
+    if (value > sarvashtakavarga[strongestHouse - 1]) strongestHouse = idx + 1
+    if (value < sarvashtakavarga[weakestHouse - 1]) weakestHouse = idx + 1
+  })
+
+  return {
+    rows,
+    sarvashtakavarga,
+    strongestHouse,
+    weakestHouse,
+  }
+}
+
+function calculateCharaDasha(
+  planets: PlanetPosition[],
+  ascendant: PlanetPosition,
+  birthDate: Date,
+  language: Language = 'en'
+): CharaDashaPeriod[] {
+  const periods: CharaDashaPeriod[] = []
+  const currentDate = new Date()
+
+  const addYears = (date: Date, years: number): Date => {
+    const msPerYear = 365.2425 * 24 * 60 * 60 * 1000
+    return new Date(date.getTime() + years * msPerYear)
+  }
+
+  const toDateString = (date: Date): string => date.toISOString().split('T')[0]
+  const yearsBetween = (start: Date, end: Date): number => {
+    const value = (end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)
+    return Math.max(0, Math.round(value * 100) / 100)
+  }
+
+  const isOddSign = (sign: number) => sign % 2 === 0
+  const startSign = ascendant.sign
+  const direction = isOddSign(startSign) ? 1 : -1
+
+  const signThemes: Record<number, { focus: string; key: string[]; caution: string[] }> = {
+    0: { focus: 'Identity and initiative', key: ['New starts', 'Leadership actions'], caution: ['Impulsive choices', 'Conflict tone'] },
+    1: { focus: 'Stability, wealth and values', key: ['Savings and assets', 'Consistent routines'], caution: ['Rigid thinking', 'Comfort-zone inertia'] },
+    2: { focus: 'Communication and skills', key: ['Learning and networking', 'Trade and writing'], caution: ['Scattered effort', 'Mixed messaging'] },
+    3: { focus: 'Home, emotional security and foundation', key: ['Family priorities', 'Property/home matters'], caution: ['Emotional overreaction', 'Attachment stress'] },
+    4: { focus: 'Creativity, authority and recognition', key: ['Visibility and confidence', 'Creative expression'], caution: ['Ego sensitivity', 'Validation dependence'] },
+    5: { focus: 'Service, health and optimization', key: ['Skill precision', 'Routine correction'], caution: ['Over-criticism', 'Anxiety loops'] },
+    6: { focus: 'Partnership and agreements', key: ['Collaborations', 'Relationship alignment'], caution: ['People-pleasing', 'Indecision'] },
+    7: { focus: 'Transformation and strategic depth', key: ['Research and resilience', 'Legacy matters'], caution: ['Trust issues', 'Control patterns'] },
+    8: { focus: 'Dharma, expansion and higher guidance', key: ['Mentor support', 'Long-distance opportunities'], caution: ['Dogmatism', 'Over-promising'] },
+    9: { focus: 'Career structure and long-term karma', key: ['Responsibility growth', 'System building'], caution: ['Delay frustration', 'Work-life imbalance'] },
+    10: { focus: 'Networks, gains and social ecosystems', key: ['Community leverage', 'Income scaling'], caution: ['Unrealistic goals', 'Peer pressure'] },
+    11: { focus: 'Closure, spirituality and release', key: ['Healing and retreat', 'Inner alignment'], caution: ['Escapism', 'Undefined boundaries'] },
+  }
+
+  const signLordSign = (signIdx: number): number => {
+    const lord = SIGN_LORDS_BY_INDEX[signIdx]
+    const lordPlanet = planets.find((p) => p.planet === lord)
+    return lordPlanet?.sign ?? signIdx
+  }
+
+  const distanceInDirection = (from: number, to: number, dir: 1 | -1): number => {
+    if (dir === 1) return ((to - from + 12) % 12) + 1
+    return ((from - to + 12) % 12) + 1
+  }
+
+  const sequence = Array.from({ length: 12 }, (_, i) => (startSign + direction * i + 120) % 12)
+
+  let startDate = new Date(birthDate)
+  for (const signIndex of sequence) {
+    const lordSign = signLordSign(signIndex)
+    const durationYears = Math.max(1, distanceInDirection(signIndex, lordSign, direction as 1 | -1))
+    const endDate = addYears(startDate, durationYears)
+    const isCurrent = currentDate >= startDate && currentDate < endDate
+    const phase: 'completed' | 'current' | 'upcoming' = isCurrent ? 'current' : currentDate >= endDate ? 'completed' : 'upcoming'
+    const progressPercent = phase === 'completed'
+      ? 100
+      : phase === 'upcoming'
+        ? 0
+        : Math.max(0, Math.min(100, Math.round((((currentDate.getTime() - startDate.getTime()) / Math.max(1, endDate.getTime() - startDate.getTime())) * 100))))
+
+    const t = signThemes[signIndex]
+    periods.push({
+      signIndex,
+      signName: language === 'hi' ? SIGN_NAMES_HI[signIndex] : SIGN_NAMES_EN[signIndex],
+      startDate: toDateString(startDate),
+      endDate: toDateString(endDate),
+      isCurrent,
+      durationYears: yearsBetween(startDate, endDate),
+      phase,
+      progressPercent,
+      focusArea: t.focus,
+      keyThemes: t.key,
+      cautionAreas: t.caution,
+    })
+
+    startDate = endDate
+  }
+
+  return periods
+}
+
+function generatePredictions(planets: PlanetPosition[], _houses: number[], ascendant: PlanetPosition, language: Language = 'en'): Prediction[] {
   const predictions: Prediction[] = []
   const locPlanets = (list: PlanetPosition[]) => list.map((p) => localizePlanetName(p.planet, language)).join(', ')
   
-  // Career predictions based on 10th house
+  const sun = planets.find(p => p.planet === 'Sun')
+  const mercury = planets.find(p => p.planet === 'Mercury')
+  const jupiter = planets.find(p => p.planet === 'Jupiter')
+  const venus = planets.find(p => p.planet === 'Venus')
+  const saturn = planets.find(p => p.planet === 'Saturn')
+  const malefics = new Set(['Mars', 'Saturn', 'Rahu', 'Ketu'])
+
+  // Career (10th house & 10th lord)
   const planetsIn10th = planets.filter(p => p.house === 10)
+  const sun10thBonus = sun?.house === 10 ? 2 : 0
+  const saturn10thBonus = saturn?.house === 10 ? 1.5 : 0
+  const careerScore = (planetsIn10th.length * 2) + sun10thBonus + saturn10thBonus
   
-  if (planetsIn10th.length > 0) {
-    predictions.push({
-      category: language === 'hi' ? 'कैरियर' : 'Career',
-      title: language === 'hi' ? 'मजबूत कैरियर संभावनाएं' : 'Strong Career Prospects',
-      description: language === 'hi'
-        ? `आपके 10वें भाव में ${locPlanets(planetsIn10th)} स्थित हैं, जो मजबूत कैरियर क्षमता और व्यावसायिक सफलता का संकेत देते हैं।`
-        : `You have ${planetsIn10th.map(p => p.planet).join(', ')} in your 10th house, indicating strong career potential and professional success.`,
-      positive: true,
-    })
-  }
-  
-  // Marriage predictions based on 7th house
+  const careerDescription = language === 'hi'
+    ? `10वें भाव में ${planetsIn10th.length > 0 ? locPlanets(planetsIn10th) + ' सहित' : ''}${sun?.house === 10 ? 'सूर्य की शक्तिशाली दृष्टि' : ''} आपके कैरियर को सक्रिय करते हैं। ${careerScore > 3 ? 'उच्च दृश्यता और नेतृत्व भूमिका की संभावना है। कार्यक्षेत्र में प्रभाव डालने के लिए जिम्मेदारी स्वीकारें।' : 'कैरियर में स्थिर प्रगति संभव है, लेकिन दीर्घकालीन रणनीति बहुत जरूरी है।'}`
+    : `Career is activated by ${planetsIn10th.length > 0 ? locPlanets(planetsIn10th) : 'planetary influence'} in the 10th house${sun?.house === 10 ? ' alongside Sun\'s powerful axis' : ''}. ${careerScore > 3 ? 'High visibility and leadership roles are likely. Take on responsibility to maximize impact.' : 'Steady career progress is possible with strategic long-term planning.'}` 
+
+  predictions.push({
+    category: language === 'hi' ? 'कैरियर' : 'Career',
+    title: careerScore > 3
+      ? (language === 'hi' ? 'मजबूत कैरियर वृद्धि' : 'Strong Career Growth')
+      : (language === 'hi' ? 'स्थिर कैरियर प्रगति' : 'Steady Career Progress'),
+    description: careerDescription,
+    positive: careerScore > 2,
+  })
+
+  // Marriage/Relationships (7th house & Venus)
   const planetsIn7th = planets.filter(p => p.house === 7)
-  
-  if (planetsIn7th.length > 0) {
-    predictions.push({
-      category: language === 'hi' ? 'विवाह' : 'Marriage',
-      title: language === 'hi' ? 'विवाह संभावनाएं' : 'Marriage Prospects',
-      description: language === 'hi'
-        ? `आपके 7वें भाव में ${locPlanets(planetsIn7th)} हैं, जो वैवाहिक जीवन पर महत्वपूर्ण प्रभाव दर्शाते हैं।`
-        : `Your 7th house has ${planetsIn7th.map(p => p.planet).join(', ')}, indicating significant marital influence.`,
-      positive: true,
-    })
-  }
-  
-  // Wealth predictions based on 2nd and 11th house
+  const venus7thBonus = venus?.house === 7 ? 2 : 0
+  const relationshipScore = (planetsIn7th.length * 2) + venus7thBonus + (malefics.has(planetsIn7th[0]?.planet ?? '') ? -1 : 0)
+
+  const relationshipDescription = language === 'hi'
+    ? `7वें भाव में ${planetsIn7th.length > 0 ? locPlanets(planetsIn7th) : 'ग्रहीय प्रभाव'} संबंधों की प्रकृति को परिभाषित करते हैं। ${venus7thBonus > 0 ? 'शुक्र की शक्तिशाली दृष्टि से विवाह-योग सशक्त है।' : ''} ${relationshipScore > 2 ? 'प्रेम और प्रतिबद्धता में सकारात्मक पूर्वदृष्टि है। संवाद और भावनात्मक जुड़ाव को प्राथमिकता दें।' : 'संबंधों में सावधानीपूर्वक दृष्टिकोण जरूरी है - स्पष्टता और सीमाएं महत्वपूर्ण हैं।'}`
+    : `Relationships are defined by ${planetsIn7th.length > 0 ? locPlanets(planetsIn7th) : 'planetary patterns'} in the 7th house.${venus7thBonus > 0 ? ' Venus strength supports marriage prospects.' : ''} ${relationshipScore > 2 ? 'Positive indicators for love and commitment. Prioritize communication and emotional connection.' : 'A cautious, clear-boundary approach to relationships is advisable.'}` 
+
+  predictions.push({
+    category: language === 'hi' ? 'विवाह' : 'Marriage',
+    title: relationshipScore > 2
+      ? (language === 'hi' ? 'विवाह के सकारात्मक संकेत' : 'Positive Marriage Indicators')
+      : (language === 'hi' ? 'सावधानी के साथ संबंध' : 'Relationship Caution'),
+    description: relationshipDescription,
+    positive: relationshipScore > 1,
+  })
+
+  // Wealth (2nd & 11th houses + Jupiter)
   const planetsIn2nd = planets.filter(p => p.house === 2)
   const planetsIn11th = planets.filter(p => p.house === 11)
-  
-  if (planetsIn2nd.length > 0 || planetsIn11th.length > 0) {
-    predictions.push({
-      category: language === 'hi' ? 'धन' : 'Wealth',
-      title: language === 'hi' ? 'आर्थिक संभावनाएं' : 'Financial Prospects',
-      description: language === 'hi'
-        ? 'धन भावों में ग्रह स्थिति अनुकूल है, जो अच्छी आर्थिक स्थिरता का संकेत देती है।'
-        : `Your wealth houses have favorable planetary positions indicating good financial stability.`,
-      positive: true,
-    })
-  }
-  
-  // Health predictions based on 6th house
+  const jupiter2or11Bonus = (jupiter?.house === 2 || jupiter?.house === 11) ? 2 : 0
+  const wealthScore = (planetsIn2nd.length + planetsIn11th.length) * 1.5 + jupiter2or11Bonus
+
+  const wealthDescription = language === 'hi'
+    ? `धन भावों (2, 11) में ${planetsIn2nd.length + planetsIn11th.length > 0 ? locPlanets([...planetsIn2nd, ...planetsIn11th]) : 'सकारात्मक प्रभाव'} आर्थिक गतिविधि को उत्तेजित करते हैं। ${jupiter2or11Bonus > 0 ? 'बृहस्पति की बूमेरेंग अनुकूल है - लाभ और नेटवर्क विस्तार संभव है।' : ''} ${wealthScore > 2 ? 'आय-वृद्धि और बचत की अवधि। वित्तीय अनुशासन बनाए रखें।' : 'आय में स्थिरता है, पर आक्रामक निवेश से बचें।'}`
+    : `Wealth houses (2nd and 11th) show activity with ${planetsIn2nd.length + planetsIn11th.length > 0 ? locPlanets([...planetsIn2nd, ...planetsIn11th]) : 'supportive patterns'}.${jupiter2or11Bonus > 0 ? ' Jupiter support favors expansion and network gains.' : ''} ${wealthScore > 2 ? 'Income growth and savings potential are high. Maintain financial discipline.' : 'Income is stable; avoid overly aggressive investments.'}` 
+
+  predictions.push({
+    category: language === 'hi' ? 'धन' : 'Wealth',
+    title: wealthScore > 2
+      ? (language === 'hi' ? 'आर्थिक वृद्धि' : 'Financial Growth')
+      : (language === 'hi' ? 'आर्थिक स्थिरता' : 'Financial Stability'),
+    description: wealthDescription,
+    positive: wealthScore > 1,
+  })
+
+  // Health (6th house & Earth signs)
   const planetsIn6th = planets.filter(p => p.house === 6)
-  
-  if (planetsIn6th.length > 0) {
-    predictions.push({
-      category: language === 'hi' ? 'स्वास्थ्य' : 'Health',
-      title: language === 'hi' ? 'स्वास्थ्य सावधानियां' : 'Health Considerations',
-      description: language === 'hi'
-        ? `स्वास्थ्य पर विशेष ध्यान दें, खासकर ${locPlanets(planetsIn6th)} से जुड़े पहलुओं पर।`
-        : `Pay attention to health matters, especially related to ${planetsIn6th.map(p => p.planet).join(', ')}.`,
-      positive: false,
-    })
-  }
-  
-  // Education predictions based on 4th and 5th house
+  const healthScore = planetsIn6th.length > 0 ? 100 - (planetsIn6th.length * 15) : 80
+  const hasStrongEarthSign = ascendant.signName === 'Taurus' || ascendant.signName === 'Virgo' || ascendant.signName === 'Capricorn'
+
+  const healthDescription = language === 'hi'
+    ? `${planetsIn6th.length > 0 ? `6वें भाव में ${locPlanets(planetsIn6th)} स्थित हैं। आप` : 'आप'} स्वास्थ्य संबंधी सावधानियों पर ध्यान दें। ${hasStrongEarthSign ? 'आपकी पृथ्वी राशि शारीरिक शक्ति देती है।' : 'नियमित व्यायाम और आहार संतुलन महत्वपूर्ण है।'} तनाव प्रबंधन और निद्रा स्वास्थ्य प्राथमिकता रहनी चाहिए।`
+    : `${planetsIn6th.length > 0 ? `With ${locPlanets(planetsIn6th)} in the 6th house,` : ''} Health needs attention and discipline. ${hasStrongEarthSign ? 'Your earth-sign nature supports physical resilience.' : 'Consistent exercise and balanced nutrition are important.'} Stress management and sleep quality are top priorities.` 
+
+  predictions.push({
+    category: language === 'hi' ? 'स्वास्थ्य' : 'Health',
+    title: healthScore > 70
+      ? (language === 'hi' ? 'स्वास्थ्य सावधानी' : 'Health Considerations')
+      : (language === 'hi' ? 'स्वास्थ्य निगरानी' : 'Health Monitoring'),
+    description: healthDescription,
+    positive: healthScore > 60,
+  })
+
+  // Education (4th & 5th houses + Mercury)
   const planetsIn4th = planets.filter(p => p.house === 4)
   const planetsIn5th = planets.filter(p => p.house === 5)
-  
-  if (planetsIn4th.length > 0 || planetsIn5th.length > 0) {
-    predictions.push({
-      category: language === 'hi' ? 'शिक्षा' : 'Education',
-      title: language === 'hi' ? 'शैक्षिक सफलता' : 'Educational Success',
-      description: language === 'hi'
-        ? 'आपकी कुंडली मजबूत शैक्षिक क्षमता और अकादमिक सफलता का संकेत देती है।'
-        : 'Your chart indicates strong educational potential and academic success.',
-      positive: true,
-    })
-  }
-  
+  const mercury4or5Bonus = (mercury?.house === 4 || mercury?.house === 5) ? 2 : 0
+  const educationScore = (planetsIn4th.length + planetsIn5th.length) * 1.5 + mercury4or5Bonus
+
+  const educationDescription = language === 'hi'
+    ? `शिक्षा भाव (4, 5) में ${planetsIn4th.length + planetsIn5th.length > 0 ? locPlanets([...planetsIn4th, ...planetsIn5th]) : 'सकारात्मक प्रभाव'} हैं। ${mercury4or5Bonus > 0 ? 'बुध की दक्षता से शिक्षा में तेजी आएगी।' : ''} ${educationScore > 2 ? 'नई सीखने की क्षमता उत्तम है। संरचित अध्ययन से परिणाम बेहतर होंगे।' : 'शिक्षा में प्रयास करने से लाभ मिलेगा।'}`
+    : `Education houses (4th and 5th) show ${planetsIn4th.length + planetsIn5th.length > 0 ? locPlanets([...planetsIn4th, ...planetsIn5th]) : 'good support'}.${mercury4or5Bonus > 0 ? ' Mercury supports quick learning.' : ''} ${educationScore > 2 ? 'Learning capacity is high. Structured study and focused effort yield best results.' : 'Education benefits from consistent effort.'}` 
+
+  predictions.push({
+    category: language === 'hi' ? 'शिक्षा' : 'Education',
+    title: educationScore > 2
+      ? (language === 'hi' ? 'शैक्षिक सफलता' : 'Educational Success')
+      : (language === 'hi' ? 'शिक्षा में प्रगति' : 'Education Progress'),
+    description: educationDescription,
+    positive: educationScore > 1,
+  })
+
   return predictions
 }
 
@@ -1683,4 +2397,242 @@ function generateRemedies(doshas: Dosha[], planets: PlanetPosition[], _language:
   remedies.push('Help those in need')
   
   return [...new Set(remedies)] // Remove duplicates
+}
+
+function clampScore(value: number): number {
+  return Math.max(5, Math.min(95, Math.round(value)))
+}
+
+function asarBand(score: number, language: Language): string {
+  if (language === 'hi') {
+    if (score >= 80) return 'बहुत मजबूत असर'
+    if (score >= 65) return 'मजबूत असर'
+    if (score >= 50) return 'मिश्रित लेकिन अनुकूल असर'
+    if (score >= 35) return 'सावधानी के साथ मध्यम असर'
+    return 'कमजोर असर, सुधार की आवश्यकता'
+  }
+
+  if (score >= 80) return 'Very strong influence'
+  if (score >= 65) return 'Strong influence'
+  if (score >= 50) return 'Mixed but favorable influence'
+  if (score >= 35) return 'Moderate influence with caution'
+  return 'Weak influence, needs correction'
+}
+
+function upcomingDashaWindow(dashas: DashaPeriod[], targetPlanets: string[], language: Language): string {
+  const currentIndex = dashas.findIndex((d) => d.isCurrent)
+  const startFrom = currentIndex >= 0 ? currentIndex : 0
+
+  for (let i = startFrom; i < Math.min(dashas.length, startFrom + 6); i++) {
+    const d = dashas[i]
+    if (targetPlanets.includes(d.planet)) {
+      return language === 'hi'
+        ? `${localizePlanetName(d.planet, language)} दशा ${d.startDate} से ${d.endDate} के बीच विशेष सक्रिय रहेगी।`
+        : `${d.planet} dasha between ${d.startDate} and ${d.endDate} can activate this area strongly.`
+    }
+  }
+
+  return language === 'hi'
+    ? 'यह क्षेत्र धीरे-धीरे सक्रिय होगा; निरंतर प्रयास से परिणाम आएंगे।'
+    : 'This area will activate gradually; consistent effort is the key.'
+}
+
+function computeMarriageTiming(
+  dashas: DashaPeriod[],
+  ascendant: PlanetPosition,
+  doshas: Dosha[],
+  language: Language = 'en'
+): string {
+  const currentIndex = dashas.findIndex((d) => d.isCurrent)
+  const startFrom = currentIndex >= 0 ? currentIndex : 0
+
+  const seventhSign = (ascendant.sign + 6) % 12
+  const houseLordBySignLocal: Record<number, string> = {
+    0: 'Mars',
+    1: 'Venus',
+    2: 'Mercury',
+    3: 'Moon',
+    4: 'Sun',
+    5: 'Mercury',
+    6: 'Venus',
+    7: 'Mars',
+    8: 'Jupiter',
+    9: 'Saturn',
+    10: 'Saturn',
+    11: 'Jupiter',
+  }
+  const seventhLord = houseLordBySignLocal[seventhSign]
+  const prioritized = [seventhLord, 'Venus', 'Jupiter', 'Moon']
+
+  for (let i = startFrom; i < Math.min(dashas.length, startFrom + 12); i++) {
+    const d = dashas[i]
+    if (prioritized.includes(d.planet)) {
+      const planetLabel = localizePlanetName(d.planet, language)
+      return language === 'hi'
+        ? `${planetLabel} दशा ${d.startDate} से ${d.endDate} के बीच विवाह/संबंधों के लिए अधिक प्रासंगिक रहेगी।`
+        : `${d.planet} dasha between ${d.startDate} and ${d.endDate} is likely to activate marriage/relationship themes.`
+    }
+  }
+
+  const manglik = doshas.some((s) => s.name === 'Mangal Dosha' && s.present)
+  const manglikNote = manglik
+    ? language === 'hi'
+      ? 'मांगल दोष मौजूद है — मेल-जोल में समय और अनुकूलता पर विशेष ध्यान दें।'
+      : 'Mangal Dosha is present — pay attention to timing and compatibility checks.'
+    : ''
+
+  return language === 'hi'
+    ? `कोई स्पष्ट दशा-खिड़की नहीं मिली; पारंपरिक उपाय और दांव पर ध्यान दें। ${manglikNote}`.trim()
+    : `No clear dasha window found; consider transits and 7th-lord activity. ${manglikNote}`.trim()
+}
+
+function houseWeight(planets: PlanetPosition[], house: number): number {
+  const benefics = new Set(['Jupiter', 'Venus', 'Mercury', 'Moon'])
+  const malefics = new Set(['Saturn', 'Mars', 'Rahu', 'Ketu', 'Sun'])
+  const inHouse = planets.filter((p) => p.house === house)
+
+  let score = 50
+  for (const p of inHouse) {
+    if (benefics.has(p.planet)) score += 10
+    if (malefics.has(p.planet)) score -= 8
+    if (p.isRetrograde) score -= 4
+  }
+  return score
+}
+
+function generateLifeAreaForecasts(
+  planets: PlanetPosition[],
+  ascendant: PlanetPosition,
+  dashas: DashaPeriod[],
+  doshas: Dosha[],
+  language: Language = 'en'
+): LifeAreaForecast[] {
+  const hasMangalDosha = doshas.some((d) => d.name === 'Mangal Dosha' && d.present)
+  const hasShaniStress = doshas.some((d) => ['Sade Sati', 'Shani Dhaiya', 'Shani Dosha'].includes(d.name) && d.present)
+
+  const moon = planets.find((p) => p.planet === 'Moon')
+  const mercury = planets.find((p) => p.planet === 'Mercury')
+  const venus = planets.find((p) => p.planet === 'Venus')
+  const jupiter = planets.find((p) => p.planet === 'Jupiter')
+  const saturn = planets.find((p) => p.planet === 'Saturn')
+  const sun = planets.find((p) => p.planet === 'Sun')
+
+  const behaviorScore = clampScore(
+    houseWeight(planets, 1) +
+    (moon ? (moon.house === 1 || moon.house === 4 ? 12 : -3) : 0) +
+    (ascendant.signName === 'Aries' || ascendant.signName === 'Scorpio' ? -4 : 3)
+  )
+
+  const marriageScore = clampScore(
+    houseWeight(planets, 7) +
+    houseWeight(planets, 2) * 0.2 +
+    (venus ? (venus.house === 7 || venus.house === 5 ? 12 : 0) : 0) +
+    (jupiter ? (jupiter.house === 7 || jupiter.house === 2 ? 8 : 0) : 0) -
+    (hasMangalDosha ? 12 : 0)
+  )
+
+  const businessScore = clampScore(
+    houseWeight(planets, 7) * 0.4 +
+    houseWeight(planets, 10) * 0.35 +
+    houseWeight(planets, 11) * 0.25 +
+    (mercury ? (mercury.house === 3 || mercury.house === 7 || mercury.house === 10 ? 8 : 0) : 0)
+  )
+
+  const jobScore = clampScore(
+    houseWeight(planets, 6) * 0.35 +
+    houseWeight(planets, 10) * 0.45 +
+    (saturn ? (saturn.house === 10 || saturn.house === 6 ? 10 : -2) : 0) +
+    (sun ? (sun.house === 10 ? 8 : 0) : 0) -
+    (hasShaniStress ? 7 : 0)
+  )
+
+  const educationScore = clampScore(
+    houseWeight(planets, 4) * 0.4 +
+    houseWeight(planets, 5) * 0.4 +
+    (mercury ? (mercury.house === 4 || mercury.house === 5 ? 10 : 0) : 0) +
+    (jupiter ? (jupiter.house === 4 || jupiter.house === 5 || jupiter.house === 9 ? 8 : 0) : 0)
+  )
+
+  const wealthScore = clampScore(
+    houseWeight(planets, 2) * 0.35 +
+    houseWeight(planets, 11) * 0.4 +
+    houseWeight(planets, 9) * 0.25 +
+    (venus ? (venus.house === 2 || venus.house === 11 ? 8 : 0) : 0) +
+    (jupiter ? (jupiter.house === 2 || jupiter.house === 11 || jupiter.house === 9 ? 8 : 0) : 0)
+  )
+
+  return [
+    {
+      area: 'Behavior',
+      score: behaviorScore,
+      influence: asarBand(behaviorScore, language),
+      analysis: language === 'hi'
+        ? `आपका व्यवहारिक पैटर्न ${ascendant.signName} लग्न और ${moon ? `${moon.signName} चंद्र` : 'चंद्र प्रभाव'} से बन रहा है। निर्णय क्षमता और भावनात्मक प्रतिक्रिया ${behaviorScore >= 60 ? 'अच्छी नियंत्रित' : 'संवेदनशील'} है।`
+        : `Your behavior pattern is shaped by ${ascendant.signName} ascendant and ${moon ? `${moon.signName} Moon` : 'Moon influence'}. Decision-making and emotional response appear ${behaviorScore >= 60 ? 'well regulated' : 'sensitive and reactive'}.`,
+      timing: upcomingDashaWindow(dashas, ['Moon', 'Mercury'], language),
+      upay: language === 'hi'
+        ? ['सुबह 10 मिनट प्राणायाम और ध्यान करें', 'भावनात्मक प्रतिक्रिया से पहले 30 सेकंड विराम लें']
+        : ['Practice 10 minutes of breathwork daily', 'Take a pause before reacting in emotional situations'],
+    },
+    {
+      area: 'Marriage',
+      score: marriageScore,
+      influence: asarBand(marriageScore, language),
+      analysis: language === 'hi'
+        ? `7वें भाव और शुक्र/बृहस्पति प्रभाव के आधार पर विवाह योग ${marriageScore >= 60 ? 'सक्रिय' : 'मध्यम'} है। ${hasMangalDosha ? 'मंगल दोष के कारण समन्वय और सही समय महत्वपूर्ण रहेगा।' : 'संवाद और परिवारिक सहमति से बात आगे बढ़ेगी।'}`
+        : `Marriage promise based on 7th house and Venus/Jupiter is ${marriageScore >= 60 ? 'active' : 'moderate'}. ${hasMangalDosha ? 'Mangal dosha adds delay/sensitivity, so timing and compatibility checks are important.' : 'Clear communication and family alignment can move things forward.'}`,
+      timing: computeMarriageTiming(dashas, ascendant, doshas, language),
+      upay: language === 'hi'
+        ? ['शुक्रवार को माता लक्ष्मी पूजन करें', 'मंगलवार को हनुमान चालीसा पढ़ें', 'रिश्तों में पारदर्शिता रखें']
+        : ['Offer prayers to Lakshmi on Fridays', 'Recite Hanuman Chalisa on Tuesdays', 'Maintain transparency in relationships'],
+    },
+    {
+      area: 'Business',
+      score: businessScore,
+      influence: asarBand(businessScore, language),
+      analysis: language === 'hi'
+        ? `व्यापार में साझेदारी, नेटवर्क और निर्णय गति का असर स्पष्ट है। स्कोर ${businessScore} होने से ${businessScore >= 65 ? 'विस्तार और स्केल' : 'संरचना और सिस्टम सुधार'} पर फोकस रखने से लाभ बेहतर होगा।`
+        : `Business potential is driven by partnership, network and execution dynamics. With score ${businessScore}, focus on ${businessScore >= 65 ? 'expansion and scaling' : 'structure and process discipline'} for better gains.`,
+      timing: upcomingDashaWindow(dashas, ['Mercury', 'Venus', 'Rahu'], language),
+      upay: language === 'hi'
+        ? ['नई डील लिखित अनुबंध के साथ करें', 'बुधवार को हरा दान करें']
+        : ['Use written contracts for new deals', 'Donate green items on Wednesdays'],
+    },
+    {
+      area: 'Job',
+      score: jobScore,
+      influence: asarBand(jobScore, language),
+      analysis: language === 'hi'
+        ? `नौकरी/कैरियर ट्रैक में 6वें और 10वें भाव का प्रभाव प्रमुख है। ${jobScore >= 65 ? 'भूमिका उन्नति और जिम्मेदारी वृद्धि' : 'धीमी पर स्थिर प्रगति'} संकेत मिलते हैं।`
+        : `Job/career track is primarily influenced by 6th and 10th houses. Signals indicate ${jobScore >= 65 ? 'role growth and responsibility rise' : 'slow but steady progress'}.`,
+      timing: upcomingDashaWindow(dashas, ['Saturn', 'Sun', 'Mercury'], language),
+      upay: language === 'hi'
+        ? ['शनिवार को सेवा/दान करें', 'कौशल उन्नयन पर मासिक योजना रखें']
+        : ['Do service or charity on Saturdays', 'Maintain a monthly upskilling plan'],
+    },
+    {
+      area: 'Education',
+      score: educationScore,
+      influence: asarBand(educationScore, language),
+      analysis: language === 'hi'
+        ? `शिक्षा में 4वें और 5वें भाव की स्थिति से सीखने की क्षमता ${educationScore >= 60 ? 'मजबूत' : 'औसत'} है। एकाग्रता और रिविजन स्ट्रक्चर से परिणाम तेज होंगे।`
+        : `Education potential from 4th/5th house pattern is ${educationScore >= 60 ? 'strong' : 'average'}. Structured revision and focused routines will significantly improve outcomes.`,
+      timing: upcomingDashaWindow(dashas, ['Mercury', 'Jupiter', 'Moon'], language),
+      upay: language === 'hi'
+        ? ['सुबह अध्ययन का स्थिर समय रखें', 'गुरुवार को गुरुजनों का सम्मान/सेवा करें']
+        : ['Keep a fixed morning study block', 'Offer respect/service to teachers on Thursdays'],
+    },
+    {
+      area: 'Wealth',
+      score: wealthScore,
+      influence: asarBand(wealthScore, language),
+      analysis: language === 'hi'
+        ? `धन योग 2, 11 और 9 भाव से बन रहा है। ${wealthScore >= 65 ? 'आय वृद्धि और बचत निर्माण' : 'आय स्थिरता के साथ व्यय नियंत्रण'} पर जोर देने से परिणाम बेहतर रहेंगे।`
+        : `Wealth pattern is formed through 2nd, 11th and 9th houses. ${wealthScore >= 65 ? 'Income expansion with savings creation' : 'Income stabilization with expense control'} will produce better outcomes.`,
+      timing: upcomingDashaWindow(dashas, ['Jupiter', 'Venus', 'Mercury'], language),
+      upay: language === 'hi'
+        ? ['आय का कम से कम 20% बचत में रखें', 'शुक्रवार/गुरुवार को दान करें']
+        : ['Save at least 20% of monthly income', 'Do charitable giving on Friday/Thursday'],
+    },
+  ]
 }

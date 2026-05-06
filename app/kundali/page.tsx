@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, Suspense } from "react"
+import { useState, useEffect, Suspense, useMemo } from "react"
 import { useSearchParams } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
@@ -8,15 +8,35 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 // Header/Footer are provided globally in the root layout
-import { NorthIndianChart } from "@/components/astrology/north-indian-chart"
+import { ChartTabContent } from "@/components/kundali/chart-tab-content"
+import { HouseTabContent } from "@/components/kundali/house-tab-content"
 import type { PlanetPosition, DivisionalChartData, DivisionalChartKey } from "@/lib/astrology/kundali"
 import { pdf } from '@react-pdf/renderer'
 import { KundaliPDF } from '@/lib/astrology/pdf-generator'
 import { PlaceAutocomplete } from "@/components/ui/place-autocomplete"
-import { Dosha, DashaPeriod, Prediction, CharacterTrait, Yoga, SpiritualGuidance, YearlyHoroscope } from "@/lib/astrology/comprehensive-kundali"
+import { Dosha, DashaPeriod, Prediction, CharacterTrait, Yoga, SpiritualGuidance, YearlyHoroscope, LifeAreaForecast, YoginiDashaPeriod, AshtakavargaMatrix, CharaDashaPeriod } from "@/lib/astrology/comprehensive-kundali"
 import { getKundaliTranslation, type Language } from "@/lib/translations/kundali"
 import { i18n } from "@/lib/i18n"
 import { Globe } from "lucide-react"
+
+const KUNDALI_LOCAL_STORAGE_KEY = "astrosure:kundali:latest"
+
+type KundaliSubmitPayload = {
+  name: string
+  gender: string
+  dob: string
+  tob: string
+  place: string
+  language: Language
+}
+
+type LocalKundaliCache = {
+  version: 1
+  payload: KundaliSubmitPayload
+  chart: any
+  syncStatus: "pending" | "synced"
+  updatedAt: string
+}
 
 const EN_NAKSHATRAS = [
   'Ashwini', 'Bharani', 'Krittika', 'Rohini', 'Mrigashira', 'Ardra',
@@ -53,12 +73,46 @@ const HI_MONTH_NAMES: Record<string, string> = {
   December: 'दिसंबर',
 }
 
+const HOUSE_TOPICS_EN = [
+  'Self, body, vitality, life direction',
+  'Family, speech, values, accumulated wealth',
+  'Courage, communication, siblings, effort',
+  'Home, mother, emotional peace, property',
+  'Creativity, children, intelligence, romance',
+  'Health, debts, competition, service',
+  'Marriage, partnerships, agreements',
+  'Transformation, hidden matters, inheritance',
+  'Dharma, fortune, higher wisdom, fatherly guidance',
+  'Career, status, karma in action',
+  'Income, gains, networks, ambitions',
+  'Losses, foreign lands, spiritual retreat, sleep',
+]
+
+const HOUSE_TOPICS_HI = [
+  'स्वभाव, शरीर, जीवन दिशा',
+  'परिवार, वाणी, मूल्य, संचय',
+  'साहस, संचार, भाई-बहन, प्रयास',
+  'घर, माता, मानसिक शांति, संपत्ति',
+  'रचनात्मकता, संतान, बुद्धि, प्रेम',
+  'स्वास्थ्य, ऋण, प्रतिस्पर्धा, सेवा',
+  'विवाह, साझेदारी, अनुबंध',
+  'परिवर्तन, गुप्त विषय, विरासत',
+  'धर्म, भाग्य, उच्च ज्ञान, गुरु कृपा',
+  'कैरियर, प्रतिष्ठा, कर्म क्षेत्र',
+  'आय, लाभ, नेटवर्क, इच्छाएं',
+  'व्यय, विदेश, आध्यात्मिकता, निद्रा',
+]
+
+const SIGN_LORDS = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter']
+
 function KundaliContent() {
   const searchParams = useSearchParams()
   const [isLoading, setIsLoading] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [placeValue, setPlaceValue] = useState("")
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [syncInfo, setSyncInfo] = useState<string | null>(null)
+  const [localCacheStatus, setLocalCacheStatus] = useState<"none" | "pending" | "synced">("none")
 
   
   // Pre-fill form from query params
@@ -128,11 +182,6 @@ function KundaliContent() {
     return localized
   }
 
-  const localizeYearlyLine = (value: string) => {
-    const localized = toHindiDataText(value)
-    return localized.replace(/^([\u0900-\u097Fa-zA-Z]+):\s*/, '')
-  }
-
   const formatTimezone = (tz?: number) => {
     if (tz === undefined || tz === null || Number.isNaN(tz)) return "-"
     const sign = tz >= 0 ? "+" : "-"
@@ -142,16 +191,25 @@ function KundaliContent() {
     return `UTC${sign}${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`
   }
 
-  const getAshtakvargaScore = (planet: string, house: number) => {
+  const getHouseInfluenceScore = (planet: string, house: number) => {
     if (!chart) return 0
 
-    const seeded = planet.split("").reduce((sum, ch) => sum + ch.charCodeAt(0), 0)
     const planetPos = planet === "Asc"
       ? chart.chartData.ascendant
       : chart.chartData.planets.find((p) => p.planet === planet)
-    const houseSeed = planetPos?.house ?? 1
 
-    return (seeded + house * 3 + houseSeed * 7 + chart.chartData.ascendant.sign) % 8
+    if (!planetPos) return 0
+
+    const distance = ((house - planetPos.house + 12) % 12) + 1
+    let score = 2
+
+    if (distance === 1) score += 3
+    if ([4, 7, 10].includes(distance)) score += 2
+    if ([5, 9].includes(distance)) score += 1
+    if ([6, 8, 12].includes(distance)) score -= 2
+    if (planetPos.isRetrograde) score -= 1
+
+    return Math.max(0, Math.min(8, score))
   }
   
   useEffect(() => {
@@ -160,7 +218,7 @@ function KundaliContent() {
       setPlaceValue(place)
     }
   }, [searchParams])
-  const [activeTab, setActiveTab] = useState<"basic" | "charts" | "planets" | "houses" | "predictions" | "dosha" | "upay" | "yearly" | "dasha">("basic")
+  const [activeTab, setActiveTab] = useState<"basic" | "charts" | "planets" | "houses" | "predictions" | "dosha" | "upay" | "yearly" | "dasha" | "full">("basic")
   const [selectedDivisionalChart, setSelectedDivisionalChart] = useState<DivisionalChartKey>("D1")
   const [chart, setChart] = useState<{
     id: string
@@ -192,11 +250,25 @@ function KundaliContent() {
       doshas: Dosha[]
       yogas: Yoga[]
       dashas: DashaPeriod[]
+      charaDashas?: CharaDashaPeriod[]
+      yoginiDashas?: YoginiDashaPeriod[]
+      ashtakavarga?: AshtakavargaMatrix
       predictions: Prediction[]
       characterTraits: CharacterTrait[]
       spiritualGuidance: SpiritualGuidance
       yearlyHoroscope: YearlyHoroscope
+      lifeAreaForecasts?: LifeAreaForecast[]
       remedies: string[]
+      planetaryStrengthening?: Array<{
+        planet: string
+        practicalStrengthening: string[]
+        traditionalStrengthening: string[]
+      }>
+      calculationModules?: Array<{
+        module: string
+        status: 'calculated' | 'partial' | 'pending'
+        note: string
+      }>
       panchangDetails?: {
         tithi: string
         nakshatra: string
@@ -206,11 +278,191 @@ function KundaliContent() {
         sunset: string
       }
     }
+    detailedNarrative?: {
+      overallSummary?: string
+      lifeThemes?: string[]
+      personalityDynamics?: string[]
+      practicalRemedies?: string[]
+    }
   } | null>(null)
 
   // Dosha/Yoga filters
   const [doshaPresentOnly, setDoshaPresentOnly] = useState<boolean>(true)
   const [yogaPresentOnly, setYogaPresentOnly] = useState<boolean>(true)
+
+  const persistLocalChart = (payload: KundaliSubmitPayload, chartData: any) => {
+    if (typeof window === "undefined") return
+    const syncStatus: "pending" | "synced" = chartData?.saved ? "synced" : "pending"
+    const cache: LocalKundaliCache = {
+      version: 1,
+      payload,
+      chart: chartData,
+      syncStatus,
+      updatedAt: new Date().toISOString(),
+    }
+    window.localStorage.setItem(KUNDALI_LOCAL_STORAGE_KEY, JSON.stringify(cache))
+    setLocalCacheStatus(syncStatus)
+  }
+
+  const clearLocalChart = () => {
+    if (typeof window === "undefined") return
+    window.localStorage.removeItem(KUNDALI_LOCAL_STORAGE_KEY)
+    setLocalCacheStatus("none")
+    setSyncInfo(language === "hi" ? "लोकल डेटा हटा दिया गया है।" : "Local stored data has been removed.")
+  }
+
+  const isAuthenticated = async () => {
+    try {
+      const res = await fetch("/api/auth/session", { cache: "no-store" })
+      if (!res.ok) return false
+      const data = await res.json()
+      return !!data?.user
+    } catch {
+      return false
+    }
+  }
+
+  const syncLocalChartToDb = async (cache: LocalKundaliCache) => {
+    if (cache.syncStatus === "synced") return
+    const authed = await isAuthenticated()
+    if (!authed) return
+
+    try {
+      const res = await fetch("/api/v1/kundali", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(cache.payload),
+      })
+      const data = await res.json()
+      if (!res.ok || !data?.success) return
+
+      const syncedChart = {
+        ...data.data,
+        dob: cache.payload.dob,
+        tob: cache.payload.tob || null,
+        place: data.data.place || cache.payload.place,
+        calculationMethod: data.data.calculationMethod,
+        mahakaalInfo: data.data.mahakaalInfo,
+        comprehensiveReport: data.data.comprehensiveReport,
+      }
+
+      setChart(syncedChart)
+      persistLocalChart(cache.payload, syncedChart)
+      setLocalCacheStatus("synced")
+      setSyncInfo(language === "hi" ? "लोकल डेटा आपके खाते में सेव कर दिया गया है।" : "Local data has been synced to your account.")
+    } catch {
+      // Keep local cache intact on sync failure.
+    }
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const raw = window.localStorage.getItem(KUNDALI_LOCAL_STORAGE_KEY)
+    if (!raw) return
+
+    try {
+      const parsed = JSON.parse(raw) as LocalKundaliCache
+      if (parsed?.version !== 1 || !parsed.chart || !parsed.payload) return
+
+      setChart(parsed.chart)
+      setPlaceValue(parsed.payload.place || "")
+      setLocalCacheStatus(parsed.syncStatus)
+      if (parsed.syncStatus === "pending") {
+        setSyncInfo(language === "hi" ? "डेटा लोकल में सुरक्षित है। लॉगिन के बाद यह अपने आप खाते में सेव हो जाएगा।" : "Data is safely stored locally. It will auto-save to your account after login.")
+      } else {
+        setSyncInfo(language === "hi" ? "डेटा लोकल और खाते में सिंक है।" : "Data is synced locally and in your account.")
+      }
+
+      void syncLocalChartToDb(parsed)
+    } catch {
+      // Ignore malformed local cache silently.
+    }
+  // Intentionally run only once at mount for restore flow.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  useEffect(() => {
+    const trySyncOnFocus = async () => {
+      if (typeof window === "undefined") return
+      const raw = window.localStorage.getItem(KUNDALI_LOCAL_STORAGE_KEY)
+      if (!raw) return
+
+      try {
+        const parsed = JSON.parse(raw) as LocalKundaliCache
+        if (parsed?.version === 1 && parsed.syncStatus === "pending") {
+          await syncLocalChartToDb(parsed)
+        }
+      } catch {
+        // Ignore malformed cache.
+      }
+    }
+
+    window.addEventListener("focus", trySyncOnFocus)
+    document.addEventListener("visibilitychange", trySyncOnFocus)
+
+    return () => {
+      window.removeEventListener("focus", trySyncOnFocus)
+      document.removeEventListener("visibilitychange", trySyncOnFocus)
+    }
+  // syncLocalChartToDb is stable enough for this lifecycle listener usage.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const allDivisionalCharts = useMemo(() => {
+    if (!chart) return [] as Array<{ key: DivisionalChartKey; data: DivisionalChartData }>
+
+    const divisionalCharts = chart.chartData.divisionalCharts
+    const fallbackD1: DivisionalChartData = {
+      key: 'D1',
+      label: 'Rashi',
+      description: 'Physical body, general life',
+      factor: 1,
+      planets: chart.chartData.planets,
+      houses: chart.chartData.houses,
+      ascendant: chart.chartData.ascendant,
+    }
+
+    const chartsMap: Record<DivisionalChartKey, DivisionalChartData> = {
+      D1: divisionalCharts?.D1 ?? fallbackD1,
+      D2: divisionalCharts?.D2 ?? fallbackD1,
+      D3: divisionalCharts?.D3 ?? fallbackD1,
+      D7: divisionalCharts?.D7 ?? fallbackD1,
+      D9: divisionalCharts?.D9 ?? fallbackD1,
+      D10: divisionalCharts?.D10 ?? fallbackD1,
+      D12: divisionalCharts?.D12 ?? fallbackD1,
+      D16: divisionalCharts?.D16 ?? fallbackD1,
+      D60: divisionalCharts?.D60 ?? fallbackD1,
+    }
+
+    const orderedKeys: DivisionalChartKey[] = ['D1', 'D2', 'D3', 'D7', 'D9', 'D10', 'D12', 'D16', 'D60']
+    return orderedKeys.map((key) => ({ key, data: chartsMap[key] }))
+  }, [chart])
+
+  const buildHouseNarrative = (houseNum: number): string => {
+    if (!chart) return ""
+    const houseSign = (chart.chartData.ascendant.sign + (houseNum - 1)) % 12
+    const signLord = SIGN_LORDS[houseSign]
+    const occupants = chart.chartData.planets.filter((p) => p.house === houseNum)
+    const occupantText = occupants.length
+      ? occupants.map((p) => localizePlanetName(p.planet)).join(language === 'hi' ? ' और ' : ' and ')
+      : language === 'hi' ? 'कोई मुख्य ग्रह नहीं' : 'no major planets'
+    const topic = language === 'hi' ? HOUSE_TOPICS_HI[houseNum - 1] : HOUSE_TOPICS_EN[houseNum - 1]
+
+    if (language === 'hi') {
+      return `भाव ${houseNum} (${topic}) में ${localizeSignByIndex(houseSign)} राशि है, जिसका स्वामी ${localizePlanetName(signLord)} है। इस भाव में ${occupantText} स्थित हैं। इस संयोजन से ${topic} विषयों में ग्रहों की प्रकृति के अनुसार अवसर और चुनौतियां दोनों बनती हैं।`
+    }
+
+    return `House ${houseNum} (${topic}) carries ${localizeSignByIndex(houseSign)} and is ruled by ${localizePlanetName(signLord)}. This house has ${occupantText}. The net outcome in ${topic.toLowerCase()} depends on planetary nature and the balance between supportive and challenging occupants.`
+  }
+
+  const buildDivisionalNarrative = (_chartKey: DivisionalChartKey, data: DivisionalChartData): string => {
+    const topPlanets = data.planets.slice(0, 4).map((p) => `${localizePlanetName(p.planet)}-${localizeSignByIndex(p.sign)}`).join(', ')
+    if (language === 'hi') {
+      return `${data.key} (${data.label}) चार्ट ${data.description} से संबंधित सूक्ष्म परिणाम दर्शाता है। इस वर्ग में लग्न ${localizeSignByIndex(data.ascendant.sign)} है और प्रमुख ग्रह स्थिति: ${topPlanets || '-'}. इस चार्ट का विश्लेषण D1 के साथ मिलाकर करना सबसे अधिक सटीक होता है।`
+    }
+    return `${data.key} (${data.label}) focuses on ${data.description.toLowerCase()}. In this varga, ascendant is ${localizeSignByIndex(data.ascendant.sign)} with key placements: ${topPlanets || '-'}. Read this chart together with D1 for a more reliable interpretation.`
+  }
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -222,6 +474,7 @@ function KundaliContent() {
     const dob = formData.get("dob") as string
     const tob = formData.get("tob") as string
     const place = formData.get("place") as string
+    const payload: KundaliSubmitPayload = { name, gender, dob, tob, place, language }
 
     try {
       setErrorMessage(null)
@@ -248,6 +501,18 @@ function KundaliContent() {
         mahakaalInfo: data.data.mahakaalInfo,
         comprehensiveReport: data.data.comprehensiveReport,
       })
+      persistLocalChart(payload, {
+        ...data.data,
+        dob,
+        tob: tob || null,
+        place: data.data.place || place,
+        calculationMethod: data.data.calculationMethod,
+        mahakaalInfo: data.data.mahakaalInfo,
+        comprehensiveReport: data.data.comprehensiveReport,
+      })
+      setSyncInfo(data.data?.saved
+        ? (language === 'hi' ? 'कुंडली आपके खाते में सेव है।' : 'Kundali is saved in your account.')
+        : (language === 'hi' ? 'कुंडली लोकल में सुरक्षित है। लॉगिन के बाद इसे खाते में शिफ्ट किया जाएगा।' : 'Kundali is stored locally. It will be moved to your account after login.'))
       setSelectedDivisionalChart("D1")
     } catch (err) {
       console.error(err)
@@ -312,6 +577,11 @@ function KundaliContent() {
                   <CardDescription>{t.formDescription}</CardDescription>
                 </CardHeader>
                 <CardContent>
+                  {syncInfo && (
+                    <div className="mb-4 rounded-lg border border-blue-200 bg-blue-50 p-3 text-sm text-blue-800">
+                      {syncInfo}
+                    </div>
+                  )}
                   {errorMessage && (
                     <div className="mb-4">
                       <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-800">
@@ -408,6 +678,7 @@ function KundaliContent() {
                       <div>
                         <h2 className="text-2xl font-bold text-gray-900">{t.kundaliReport}</h2>
                         <p className="text-sm text-gray-500">{t.generatedWithMahakaal} {chart.name}</p>
+                        {syncInfo ? <p className="mt-1 text-xs text-blue-700">{syncInfo}</p> : null}
                       </div>
                       {/* Language Toggle */}
                       <div className="flex items-center gap-2">
@@ -421,11 +692,20 @@ function KundaliContent() {
                           <option value="hi">{t.hindi}</option>
                         </select>
                       </div>
-                      {chart.mahakaalInfo && (
-                        <span className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-xs font-medium text-orange-800">
-                          {t.mahakaalTime}
-                        </span>
-                      )}
+                      <div className="flex flex-col items-end gap-2">
+                        {localCacheStatus !== "none" ? (
+                          <span className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${localCacheStatus === "synced" ? "bg-green-100 text-green-800" : "bg-amber-100 text-amber-800"}`}>
+                            {localCacheStatus === "synced"
+                              ? (language === "hi" ? "लोकल + अकाउंट सिंक" : "Local + Account Synced")
+                              : (language === "hi" ? "लोकल में सुरक्षित" : "Stored Locally")}
+                          </span>
+                        ) : null}
+                        {chart.mahakaalInfo && (
+                          <span className="inline-flex items-center rounded-full bg-orange-100 px-3 py-1 text-xs font-medium text-orange-800">
+                            {t.mahakaalTime}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -435,6 +715,7 @@ function KundaliContent() {
                   <div className="flex overflow-x-auto scrollbar-hide">
                     {[
                       { id: 'basic', label: t.basicDetails },
+                      { id: 'full', label: language === 'hi' ? 'पूर्ण रिपोर्ट' : 'Complete Report' },
                       { id: 'charts', label: t.charts },
                       { id: 'planets', label: t.planets },
                       { id: 'houses', label: t.houses },
@@ -446,7 +727,7 @@ function KundaliContent() {
                     ].map((tab) => (
                       <button
                         key={tab.id}
-                        onClick={() => setActiveTab(tab.id as "basic" | "charts" | "planets" | "houses" | "predictions" | "dosha" | "upay" | "yearly" | "dasha")}
+                        onClick={() => setActiveTab(tab.id as "basic" | "charts" | "planets" | "houses" | "predictions" | "dosha" | "upay" | "yearly" | "dasha" | "full")}
                         className={`flex-shrink-0 px-3 sm:px-4 py-3 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                           activeTab === tab.id
                             ? 'border-b-2 border-orange-500 text-orange-600 bg-orange-50'
@@ -461,6 +742,243 @@ function KundaliContent() {
 
                 {/* Tab Content */}
                 <div className="min-h-[400px]">
+                  {/* COMPLETE REPORT TAB */}
+                  {activeTab === 'full' && (
+                    <div className="space-y-6">
+                      <Card className="shadow-lg">
+                        <CardHeader>
+                          <CardTitle>{language === 'hi' ? 'सम्पूर्ण कुंडली सारांश' : 'Complete Kundli Master Summary'}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-3 text-sm leading-7 text-gray-700">
+                          <p>
+                            {language === 'hi'
+                              ? `आपका लग्न ${localizeSignByIndex(chart.chartData.ascendant.sign)} है। यह मूल व्यक्तित्व, निर्णय शैली और जीवन की दिशा को संचालित करता है।`
+                              : `Your ascendant is ${localizeSignByIndex(chart.chartData.ascendant.sign)}. This sets the baseline for personality, decision style, and life direction.`}
+                          </p>
+                          <p>
+                            {language === 'hi'
+                              ? `कुल ${chart.comprehensiveReport?.doshas?.filter((d) => d.present).length || 0} प्रभावशाली दोष और ${chart.comprehensiveReport?.yogas?.filter((y) => y.present).length || 0} सक्रिय योग पाए गए हैं। इसलिए चार्ट में अवसर और सावधानी दोनों मौजूद हैं।`
+                              : `${chart.comprehensiveReport?.doshas?.filter((d) => d.present).length || 0} influential doshas and ${chart.comprehensiveReport?.yogas?.filter((y) => y.present).length || 0} active yogas are detected, showing a mixed profile of strengths and caution zones.`}
+                          </p>
+                          <p>
+                            {language === 'hi'
+                              ? 'नीचे ग्रह, भाव, वर्ग कुंडलियाँ, दशा, उपाय और मॉड्यूल स्थिति को एक ही जगह गहराई से दिखाया गया है ताकि आपको पूरा तकनीकी और व्यावहारिक चित्र मिल सके।'
+                              : 'Below you get planets, houses, divisional charts, dasha context, remedies, and module status in one place for a deep technical and practical reading.'}
+                          </p>
+                          {chart.detailedNarrative?.overallSummary ? (
+                            <p className="rounded-lg border border-orange-100 bg-orange-50 p-3 text-xs text-gray-700">
+                              {toHindiDataText(chart.detailedNarrative.overallSummary)}
+                            </p>
+                          ) : null}
+                          {chart.detailedNarrative?.lifeThemes?.length ? (
+                            <div>
+                              <p className="text-xs font-semibold text-gray-900">{language === 'hi' ? 'मुख्य जीवन थीम' : 'Core Life Themes'}</p>
+                              <ul className="mt-1 space-y-1 text-xs text-gray-700">
+                                {chart.detailedNarrative.lifeThemes.map((line) => (
+                                  <li key={line}>• {toHindiDataText(line)}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ) : null}
+                        </CardContent>
+                      </Card>
+
+                      {chart.comprehensiveReport?.lifeAreaForecasts?.length ? (
+                        <div className="space-y-4">
+                          {/* FEATURED MARRIAGE TIMING CARD */}
+                          {(() => {
+                            const marriageCard = chart.comprehensiveReport.lifeAreaForecasts.find((f) => f.area.toLowerCase().includes('marriage') || f.area.toLowerCase().includes('vivah'))
+                            if (marriageCard) {
+                              const getBadgeStyle = (influence: string) => {
+                                if (influence.includes('Very Strong') || influence.includes('बहुत मजबूत')) {
+                                  return 'bg-green-100 border-green-300 text-green-700'
+                                } else if (influence.includes('Strong') || influence.includes('मजबूत')) {
+                                  return 'bg-blue-100 border-blue-300 text-blue-700'
+                                } else if (influence.includes('Moderate') || influence.includes('मध्यम')) {
+                                  return 'bg-yellow-100 border-yellow-300 text-yellow-700'
+                                } else {
+                                  return 'bg-red-100 border-red-300 text-red-700'
+                                }
+                              }
+                              return (
+                                <Card className="border-2 border-purple-200 bg-gradient-to-br from-purple-50 to-pink-50 shadow-lg">
+                                  <CardHeader className="bg-gradient-to-r from-purple-500 to-pink-500 text-white">
+                                    <CardTitle className="flex items-center gap-2">
+                                      <span>💍</span>
+                                      <span>{language === 'hi' ? 'शादी कब होगी? / When Will Marriage Happen?' : 'When Will Marriage Happen? / शादी कब होगी?'}</span>
+                                    </CardTitle>
+                                  </CardHeader>
+                                  <CardContent className="space-y-4 pt-6">
+                                    <div className="flex items-center gap-4 rounded-lg bg-white p-4">
+                                      <div className="flex-1">
+                                        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">{language === 'hi' ? 'वर्तमान प्रभाव' : 'Current Influence'}</p>
+                                        <div className={`mt-2 inline-block rounded-full border-2 px-4 py-2 text-sm font-bold ${getBadgeStyle(marriageCard.influence)}`}>
+                                          {toHindiDataText(marriageCard.influence)}
+                                        </div>
+                                      </div>
+                                      <div className="text-right">
+                                        <p className="text-3xl font-bold text-purple-600">{marriageCard.score}</p>
+                                        <p className="text-xs text-gray-500">/100</p>
+                                      </div>
+                                    </div>
+
+                                    <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
+                                      <div
+                                        className={`h-full transition-all ${
+                                          marriageCard.score >= 70 ? 'bg-green-500' : marriageCard.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                        }`}
+                                        style={{ width: `${marriageCard.score}%` }}
+                                      />
+                                    </div>
+
+                                    <div className="rounded-lg bg-white p-4 border border-purple-100">
+                                      <p className="text-sm leading-6 text-gray-700">{toHindiDataText(marriageCard.analysis)}</p>
+                                    </div>
+
+                                    <div className="rounded-lg bg-gradient-to-r from-blue-50 to-purple-50 p-4 border border-blue-200">
+                                      <p className="text-xs font-semibold text-blue-900 mb-2">{language === 'hi' ? '⏰ सक्रियण समय' : '⏰ Activation Window'}</p>
+                                      <p className="text-sm font-bold text-blue-700">{toHindiDataText(marriageCard.timing)}</p>
+                                    </div>
+
+                                    {marriageCard.upay.length > 0 && (
+                                      <div className="rounded-lg bg-white p-4 border border-green-200">
+                                        <p className="text-xs font-semibold text-green-900 mb-3">{language === 'hi' ? '🙏 सुझाए गए उपाय (Remedies)' : '🙏 Recommended Upay (Remedies)'}</p>
+                                        <ul className="space-y-2 text-sm">
+                                          {marriageCard.upay.map((line, idx) => (
+                                            <li key={idx} className="flex items-start gap-2 text-gray-700">
+                                              <span className="mt-1 inline-block h-2 w-2 rounded-full bg-green-500 flex-shrink-0" />
+                                              <span>{toHindiDataText(line)}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    )}
+                                  </CardContent>
+                                </Card>
+                              )
+                            }
+                            return null
+                          })()}
+
+                          {/* ALL OTHER LIFE AREA CARDS */}
+                          <Card className="shadow-lg">
+                            <CardHeader>
+                              <CardTitle>{language === 'hi' ? 'अन्य जीवन क्षेत्र: असर, समय और उपाय' : 'Other Life Areas: Influence, Timing & Remedies'}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="grid gap-4 md:grid-cols-2">
+                              {chart.comprehensiveReport.lifeAreaForecasts
+                                .filter((item) => !item.area.toLowerCase().includes('marriage') && !item.area.toLowerCase().includes('vivah'))
+                                .map((item) => {
+                                  const getBadgeStyle = (influence: string) => {
+                                    if (influence.includes('Very Strong') || influence.includes('बहुत मजबूत')) {
+                                      return 'bg-green-100 border-green-300 text-green-700'
+                                    } else if (influence.includes('Strong') || influence.includes('मजबूत')) {
+                                      return 'bg-blue-100 border-blue-300 text-blue-700'
+                                    } else if (influence.includes('Moderate') || influence.includes('मध्यम')) {
+                                      return 'bg-yellow-100 border-yellow-300 text-yellow-700'
+                                    } else {
+                                      return 'bg-red-100 border-red-300 text-red-700'
+                                    }
+                                  }
+                                  return (
+                                    <div key={item.area} className="rounded-lg border border-gray-200 bg-gradient-to-br from-gray-50 to-white p-5 hover:shadow-md transition-shadow">
+                                      <div className="flex items-start justify-between gap-2 mb-3">
+                                        <p className="text-sm font-bold text-gray-900">{toHindiDataText(item.area)}</p>
+                                        <div className="text-right">
+                                          <p className="text-2xl font-bold text-gray-700">{item.score}</p>
+                                          <p className="text-xs text-gray-500">/100</p>
+                                        </div>
+                                      </div>
+
+                                      <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden mb-3">
+                                        <div
+                                          className={`h-full transition-all ${
+                                            item.score >= 70 ? 'bg-green-500' : item.score >= 50 ? 'bg-yellow-500' : 'bg-red-500'
+                                          }`}
+                                          style={{ width: `${item.score}%` }}
+                                        />
+                                      </div>
+
+                                      <div className={`inline-block rounded-full border-2 px-3 py-1 text-xs font-bold mb-3 ${getBadgeStyle(item.influence)}`}>
+                                        {toHindiDataText(item.influence)}
+                                      </div>
+
+                                      <p className="text-xs leading-5 text-gray-700 mb-3">{toHindiDataText(item.analysis)}</p>
+
+                                      <div className="rounded bg-blue-50 p-2 mb-3 border-l-4 border-blue-400">
+                                        <p className="text-xs font-semibold text-blue-900 mb-1">{language === 'hi' ? 'समय संकेत' : 'Timing'}</p>
+                                        <p className="text-xs text-blue-800">{toHindiDataText(item.timing)}</p>
+                                      </div>
+
+                                      {item.upay.length > 0 && (
+                                        <div>
+                                          <p className="text-xs font-semibold text-green-800 mb-2">{language === 'hi' ? 'उपाय' : 'Upay'}</p>
+                                          <ul className="space-y-1 text-xs text-gray-700">
+                                            {item.upay.slice(0, 3).map((line, idx) => (
+                                              <li key={idx} className="flex items-start gap-1">
+                                                <span className="text-green-600 font-bold flex-shrink-0">✓</span>
+                                                <span>{toHindiDataText(line)}</span>
+                                              </li>
+                                            ))}
+                                            {item.upay.length > 3 && (
+                                              <li className="text-xs text-gray-500 italic">+{item.upay.length - 3} more upay</li>
+                                            )}
+                                          </ul>
+                                        </div>
+                                      )}
+                                    </div>
+                                  )
+                                })}
+                            </CardContent>
+                          </Card>
+                        </div>
+                      ) : null}
+
+                      <Card className="shadow-lg">
+                        <CardHeader>
+                          <CardTitle>{language === 'hi' ? 'विस्तृत तकनीकी अनुभाग' : 'Detailed Technical Sections'}</CardTitle>
+                          <CardDescription>
+                            {language === 'hi'
+                              ? 'डुप्लिकेशन हटाने के लिए विस्तृत ग्रह/भाव/वर्ग कुंडली/सशक्तीकरण डेटा अपने-अपने टैब में दिखाया गया है।'
+                              : 'To avoid duplication, detailed planet/house/divisional/strengthening data is shown in dedicated tabs.'}
+                          </CardDescription>
+                        </CardHeader>
+                        <CardContent className="flex flex-wrap gap-2">
+                          <Button variant="outline" size="sm" onClick={() => setActiveTab('planets')}>
+                            {language === 'hi' ? 'Planets टैब खोलें' : 'Open Planets Tab'}
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setActiveTab('houses')}>
+                            {language === 'hi' ? 'Houses टैब खोलें' : 'Open Houses Tab'}
+                          </Button>
+                          <Button variant="outline" size="sm" onClick={() => setActiveTab('charts')}>
+                            {language === 'hi' ? 'Charts टैब खोलें' : 'Open Charts Tab'}
+                          </Button>
+                        </CardContent>
+                      </Card>
+
+                      {chart.comprehensiveReport?.calculationModules?.length ? (
+                        <Card className="shadow-lg">
+                          <CardHeader>
+                            <CardTitle>{language === 'hi' ? 'गणना मॉड्यूल स्थिति' : 'Calculation Module Coverage'}</CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            {chart.comprehensiveReport.calculationModules.map((module) => (
+                              <div key={module.module} className="flex flex-wrap items-center justify-between gap-3 rounded border p-3 text-sm">
+                                <p className="font-medium text-gray-900">{toHindiDataText(module.module)}</p>
+                                <span className={`rounded px-2 py-1 text-xs font-semibold ${
+                                  module.status === 'calculated' ? 'bg-green-100 text-green-700' : module.status === 'partial' ? 'bg-yellow-100 text-yellow-700' : 'bg-gray-100 text-gray-700'
+                                }`}>
+                                  {module.status}
+                                </span>
+                                <p className="w-full text-xs text-gray-600">{toHindiDataText(module.note)}</p>
+                              </div>
+                            ))}
+                          </CardContent>
+                        </Card>
+                      ) : null}
+                    </div>
+                  )}
+
                   {/* BASIC DETAILS TAB */}
                   {activeTab === 'basic' && (
                     <div className="rounded-xl bg-gradient-to-br from-yellow-400 via-yellow-300 to-yellow-200 p-1 shadow-xl">
@@ -608,85 +1126,15 @@ function KundaliContent() {
 
                   {/* CHARTS TAB */}
                   {activeTab === 'charts' && (
-                    <div className="space-y-6">
-                      {(() => {
-                        const divisionalCharts = chart.chartData.divisionalCharts
-                        const fallbackD1: DivisionalChartData = {
-                          key: 'D1',
-                          label: 'Rashi',
-                          description: 'Physical body, general life',
-                          factor: 1,
-                          planets: chart.chartData.planets,
-                          houses: chart.chartData.houses,
-                          ascendant: chart.chartData.ascendant,
-                        }
-
-                        const chartsMap: Record<DivisionalChartKey, DivisionalChartData> = {
-                          D1: divisionalCharts?.D1 ?? fallbackD1,
-                          D2: divisionalCharts?.D2 ?? fallbackD1,
-                          D3: divisionalCharts?.D3 ?? fallbackD1,
-                          D7: divisionalCharts?.D7 ?? fallbackD1,
-                          D9: divisionalCharts?.D9 ?? fallbackD1,
-                          D10: divisionalCharts?.D10 ?? fallbackD1,
-                          D12: divisionalCharts?.D12 ?? fallbackD1,
-                          D16: divisionalCharts?.D16 ?? fallbackD1,
-                          D60: divisionalCharts?.D60 ?? fallbackD1,
-                        }
-
-                        const orderedKeys: DivisionalChartKey[] = ['D1', 'D2', 'D3', 'D7', 'D9', 'D10', 'D12', 'D16', 'D60']
-                        const activeKey = orderedKeys.includes(selectedDivisionalChart) ? selectedDivisionalChart : 'D1'
-                        const selectedChartData = chartsMap[activeKey]
-
-                        return (
-                          <>
-                            <div className="rounded-xl bg-gradient-to-br from-yellow-400 via-yellow-300 to-yellow-200 p-1 shadow-xl">
-                              <div className="rounded-xl bg-white p-6">
-                                <h3 className="mb-2 text-lg font-semibold text-gray-900">
-                                  {selectedChartData.key} - {selectedChartData.label} Chart
-                                </h3>
-                                <p className="mb-4 text-sm text-gray-600">{selectedChartData.description}</p>
-                                <div className="flex justify-center">
-                                  <div className="relative">
-                                    <NorthIndianChart
-                                      planets={selectedChartData.planets}
-                                      ascendant={selectedChartData.ascendant}
-                                    />
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="rounded-xl bg-white shadow-lg p-6">
-                              <h3 className="mb-4 text-lg font-semibold text-gray-900">Divisional Charts (Varga)</h3>
-                              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                                {orderedKeys.map((chartKey) => {
-                                  const item = chartsMap[chartKey]
-                                  const isActive = chartKey === activeKey
-                                  return (
-                                    <button
-                                      key={chartKey}
-                                      type="button"
-                                      onClick={() => setSelectedDivisionalChart(chartKey)}
-                                      className={`rounded-lg border p-4 text-left transition-colors ${
-                                        isActive
-                                          ? 'bg-orange-50 border-orange-300 ring-2 ring-orange-200'
-                                          : 'bg-gray-50 hover:bg-orange-50/40 border-gray-200'
-                                      }`}
-                                    >
-                                      <div className="flex items-center justify-between">
-                                        <h4 className="text-sm font-semibold text-gray-900">{item.key} - {item.label}</h4>
-                                        {isActive && <span className="text-xs font-medium text-orange-600">Viewing</span>}
-                                      </div>
-                                      <p className="mt-1 text-xs text-gray-600">{item.description}</p>
-                                    </button>
-                                  )
-                                })}
-                              </div>
-                            </div>
-                          </>
-                        )
-                      })()}
-                    </div>
+                    <ChartTabContent
+                      language={language}
+                      allDivisionalCharts={allDivisionalCharts}
+                      selectedDivisionalChart={selectedDivisionalChart}
+                      onSelectDivisionalChart={setSelectedDivisionalChart}
+                      buildDivisionalNarrative={buildDivisionalNarrative}
+                      localizePlanetName={localizePlanetName}
+                      localizeSignByIndex={localizeSignByIndex}
+                    />
                   )}
 
                   {/* PLANETS TAB */}
@@ -730,126 +1178,48 @@ function KundaliContent() {
                       </div>
                     </div>
 
-                    {/* Houses Table with Lords - AstroTalk Style */}
-                    <div className="mt-8">
-                      <h3 className="mb-3 text-sm font-semibold text-gray-500 uppercase">{language === 'hi' ? 'भाव विश्लेषण' : 'Houses Analysis'}</h3>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-3 py-2 text-left font-semibold text-gray-700">{t.house}</th>
-                              <th className="px-3 py-2 text-left font-semibold text-gray-700">{t.sign}</th>
-                              <th className="px-3 py-2 text-left font-semibold text-gray-700">{language === 'hi' ? 'राशि स्वामी' : 'Sign Lord'}</th>
-                              <th className="px-3 py-2 text-left font-semibold text-gray-700">{language === 'hi' ? 'नक्षत्र स्वामी' : 'Star Lord'}</th>
-                              <th className="px-3 py-2 text-left font-semibold text-gray-700">{language === 'hi' ? 'उप स्वामी' : 'Sub Lord'}</th>
-                              <th className="px-3 py-2 text-left font-semibold text-gray-700">{language === 'hi' ? 'ग्रह' : 'Planets'}</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {Array.from({ length: 12 }, (_, i) => {
-                              const houseNum = i + 1;
-                              const planetsInHouse = chart.chartData.planets.filter(p => p.house === houseNum);
-                              const houseSign = (chart.chartData.ascendant.sign + i) % 12;
-                              const signLords = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
-                              return (
-                                <tr key={houseNum}>
-                                  <td className="px-3 py-2 font-medium text-gray-900">{houseNum}</td>
-                                  <td className="px-3 py-2 text-gray-700">{localizeSignByIndex(houseSign)}</td>
-                                  <td className="px-3 py-2 text-gray-700">{localizePlanetName(signLords[houseSign])}</td>
-                                  <td className="px-3 py-2 text-gray-700">-</td>
-                                  <td className="px-3 py-2 text-gray-700">-</td>
-                                  <td className="px-3 py-2 text-gray-700">
-                                    {planetsInHouse.map(p => localizePlanetName(p.planet)).join(', ') || '-'}
-                                  </td>
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-
-                    {/* Ashtakvarga Table */}
-                    <div className="mt-8">
-                      <h3 className="mb-3 text-sm font-semibold text-gray-500 uppercase">Ashtakvarga (Sarvashtakvarga)</h3>
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead className="bg-gray-50">
-                            <tr>
-                              <th className="px-2 py-2 text-left font-semibold text-gray-700">Planet</th>
-                              {Array.from({ length: 12 }, (_, i) => (
-                                <th key={i} className="px-2 py-2 text-center font-semibold text-gray-700">{i + 1}</th>
-                              ))}
-                              <th className="px-2 py-2 text-center font-semibold text-gray-700">Total</th>
-                            </tr>
-                          </thead>
-                          <tbody className="divide-y divide-gray-100">
-                            {['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Asc'].map((planet) => (
-                              <tr key={planet}>
-                                <td className="px-2 py-2 font-medium text-gray-900">{planet}</td>
-                                {Array.from({ length: 12 }, (_, i) => {
-                                  const score = getAshtakvargaScore(planet, i + 1)
-                                  return (
-                                    <td key={i} className={`px-2 py-2 text-center text-gray-700 ${score >= 5 ? 'bg-green-50 font-semibold' : score <= 2 ? 'bg-red-50' : ''}`}>
-                                      {score}
-                                    </td>
-                                  );
-                                })}
-                                <td className="px-2 py-2 text-center font-bold text-gray-900">
-                                  {Array.from({ length: 12 }, (_, i) => getAshtakvargaScore(planet, i + 1)).reduce((acc, val) => acc + val, 0)}
-                                </td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
+                    {chart.comprehensiveReport?.planetaryStrengthening?.length ? (
+                      <Card className="shadow-lg">
+                        <CardHeader>
+                          <CardTitle>{language === 'hi' ? 'ग्रह सशक्तीकरण योजना' : 'Planetary Strengthening Plan'}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="grid gap-4 md:grid-cols-2">
+                          {chart.comprehensiveReport.planetaryStrengthening.map((item) => (
+                            <div key={item.planet} className="rounded-lg border border-purple-100 bg-purple-50/30 p-4 text-xs">
+                              <p className="text-sm font-semibold text-gray-900">{localizePlanetName(item.planet)}</p>
+                              <p className="mt-2 font-semibold text-gray-700">{language === 'hi' ? 'व्यावहारिक उपाय' : 'Practical'}</p>
+                              <ul className="mt-1 space-y-1 text-gray-600">
+                                {item.practicalStrengthening.map((line) => (
+                                  <li key={line}>• {toHindiDataText(line)}</li>
+                                ))}
+                              </ul>
+                              <p className="mt-3 font-semibold text-gray-700">{language === 'hi' ? 'पारंपरिक उपाय' : 'Traditional'}</p>
+                              <ul className="mt-1 space-y-1 text-gray-600">
+                                {item.traditionalStrengthening.map((line) => (
+                                  <li key={line}>• {toHindiDataText(line)}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    ) : null}
 
                     </div>
                   )}
 
                   {/* HOUSES TAB */}
                   {activeTab === 'houses' && (
-                    <div className="space-y-6">
-                      {/* Houses Table with Lords */}
-                      <div className="rounded-xl bg-white shadow-lg p-6">
-                        <h3 className="mb-4 text-lg font-semibold text-gray-900">{language === 'hi' ? 'भाव विश्लेषण' : 'Houses Analysis'}</h3>
-                        <div className="overflow-x-auto">
-                          <table className="w-full text-sm">
-                            <thead className="bg-gray-50">
-                              <tr>
-                                <th className="px-3 py-2 text-left font-semibold text-gray-700">{t.house}</th>
-                                <th className="px-3 py-2 text-left font-semibold text-gray-700">{t.sign}</th>
-                                <th className="px-3 py-2 text-left font-semibold text-gray-700">{language === 'hi' ? 'राशि स्वामी' : 'Sign Lord'}</th>
-                                <th className="px-3 py-2 text-left font-semibold text-gray-700">{language === 'hi' ? 'नक्षत्र स्वामी' : 'Star Lord'}</th>
-                                <th className="px-3 py-2 text-left font-semibold text-gray-700">{language === 'hi' ? 'उप स्वामी' : 'Sub Lord'}</th>
-                                <th className="px-3 py-2 text-left font-semibold text-gray-700">{language === 'hi' ? 'ग्रह' : 'Planets'}</th>
-                              </tr>
-                            </thead>
-                            <tbody className="divide-y divide-gray-100">
-                              {Array.from({ length: 12 }, (_, i) => {
-                                const houseNum = i + 1;
-                                const planetsInHouse = chart.chartData.planets.filter(p => p.house === houseNum);
-                                const houseSign = (chart.chartData.ascendant.sign + i) % 12;
-                                const signLords = ['Mars', 'Venus', 'Mercury', 'Moon', 'Sun', 'Mercury', 'Venus', 'Mars', 'Jupiter', 'Saturn', 'Saturn', 'Jupiter'];
-                                return (
-                                  <tr key={houseNum}>
-                                    <td className="px-3 py-2 font-medium text-gray-900">{houseNum}</td>
-                                    <td className="px-3 py-2 text-gray-700">{localizeSignByIndex(houseSign)}</td>
-                                    <td className="px-3 py-2 text-gray-700">{localizePlanetName(signLords[houseSign])}</td>
-                                    <td className="px-3 py-2 text-gray-700">-</td>
-                                    <td className="px-3 py-2 text-gray-700">-</td>
-                                    <td className="px-3 py-2 text-gray-700">
-                                      {planetsInHouse.map(p => localizePlanetName(p.planet)).join(', ') || '-'}
-                                    </td>
-                                  </tr>
-                                );
-                              })}
-                            </tbody>
-                          </table>
-                        </div>
-                      </div>
-                    </div>
+                    <HouseTabContent
+                      language={language}
+                      planets={chart.chartData.planets}
+                      ascendantSign={chart.chartData.ascendant.sign}
+                      localizeSignByIndex={localizeSignByIndex}
+                      localizePlanetName={localizePlanetName}
+                      buildHouseNarrative={buildHouseNarrative}
+                      getHouseInfluenceScore={getHouseInfluenceScore}
+                      ashtakavarga={chart.comprehensiveReport?.ashtakavarga}
+                    />
                   )}
 
             {/* DOSHA TAB */}
@@ -1109,31 +1479,127 @@ function KundaliContent() {
               <div className="space-y-6">
                 {chart.comprehensiveReport?.yearlyHoroscope && (
                   <>
-                    <Card className="shadow-lg">
+                    <Card className="shadow-lg bg-gradient-to-br from-purple-50 to-pink-50 border-purple-200">
                       <CardHeader>
-                        <CardTitle>{language === 'hi' ? 'पूर्ण वार्षिक राशिफल' : 'Complete Year Horoscope'} ({chart.comprehensiveReport.yearlyHoroscope.year})</CardTitle>
+                        <CardTitle className="text-purple-900">{language === 'hi' ? 'वार्षिक राशिफल' : 'Annual Horoscope'} ({chart.comprehensiveReport.yearlyHoroscope.year})</CardTitle>
+                        <CardDescription className="text-purple-700">
+                          {chart.comprehensiveReport.yearlyHoroscope.currentDashaYear}
+                        </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <p className="text-sm leading-relaxed text-gray-700">
+                        <p className="text-sm leading-relaxed text-gray-800 font-semibold mb-4">
                           {toHindiDataText(chart.comprehensiveReport.yearlyHoroscope.overview)}
                         </p>
                       </CardContent>
                     </Card>
 
+                    {chart.comprehensiveReport.yearlyHoroscope.quarterly?.length ? (
+                      <Card className="shadow-lg">
+                        <CardHeader>
+                          <CardTitle>{language === 'hi' ? 'त्रैमासिक पूर्वानुमान - गहन दृष्टिकोण' : 'Quarterly Forecasts - In-Depth View'}</CardTitle>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                          {chart.comprehensiveReport.yearlyHoroscope.quarterly.map((q) => (
+                            <div key={q.quarter} className="rounded-lg border border-gray-200 overflow-hidden">
+                              <div className="bg-gradient-to-r from-orange-100 to-yellow-100 p-4 border-b">
+                                <h4 className="text-lg font-bold text-gray-900">{toHindiDataText(q.months)}</h4>
+                                <p className="text-sm text-gray-700 mt-2">{toHindiDataText(q.dashaContext)}</p>
+                              </div>
+                              <div className="p-4 space-y-4">
+                                <div>
+                                  <p className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">{language === 'hi' ? 'जीवन क्षेत्र सक्रियण' : 'Life Area Activations'}</p>
+                                  <ul className="space-y-1 text-sm">
+                                    {q.lifeAreaActivations.map((activation, idx) => (
+                                      <li key={idx} className="flex items-start gap-2 text-gray-700">
+                                        <span className="text-orange-500 font-bold mt-0.5">▪</span>
+                                        <span>{toHindiDataText(activation)}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                    <p className="text-xs font-semibold text-green-700 uppercase tracking-wide mb-2">{language === 'hi' ? 'मुख्य फोकस' : 'Key Focuses'}</p>
+                                    <ul className="space-y-1 text-xs">
+                                      {q.keyFocuses.map((focus, idx) => (
+                                        <li key={idx} className="flex items-start gap-2 text-gray-600">
+                                          <span className="text-green-600 font-bold">✓</span>
+                                          <span>{toHindiDataText(focus)}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs font-semibold text-red-700 uppercase tracking-wide mb-2">{language === 'hi' ? 'सावधानियां' : 'Warning Areas'}</p>
+                                    <ul className="space-y-1 text-xs">
+                                      {q.warningAreas.map((warning, idx) => (
+                                        <li key={idx} className="flex items-start gap-2 text-gray-600">
+                                          <span className="text-red-600 font-bold">⚠</span>
+                                          <span>{toHindiDataText(warning)}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                </div>
+
+                                <div>
+                                  <p className="text-xs font-semibold text-blue-700 uppercase tracking-wide mb-2">{language === 'hi' ? 'कार्य आइटम' : 'Action Items'}</p>
+                                  <ul className="space-y-1 text-sm">
+                                    {q.actionItems.map((item, idx) => (
+                                      <li key={idx} className="flex items-start gap-2 text-gray-700">
+                                        <span className="text-blue-500 font-bold">→</span>
+                                        <span>{toHindiDataText(item)}</span>
+                                      </li>
+                                    ))}
+                                  </ul>
+                                </div>
+
+                                <div className="rounded-lg bg-orange-50 border-l-4 border-orange-400 p-3 mt-3">
+                                  <p className="text-sm text-orange-900 leading-relaxed">{toHindiDataText(q.expectedOutcomes)}</p>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </CardContent>
+                      </Card>
+                    ) : null}
+
                     <Card className="shadow-lg">
                       <CardHeader>
-                        <CardTitle>{language === 'hi' ? 'महीना-दर-महीना मार्गदर्शन' : 'Month-by-Month Guidance'}</CardTitle>
+                        <CardTitle>{language === 'hi' ? 'महीना-दर-महीना विस्तृत मार्गदर्शन' : 'Month-by-Month Detailed Guidance'}</CardTitle>
                       </CardHeader>
                       <CardContent>
                         <div className="space-y-3">
                           {chart.comprehensiveReport.yearlyHoroscope.monthly.map((m, idx) => (
-                            <div key={idx} className="rounded-lg border bg-gray-50 p-3">
-                              <div className="flex items-start justify-between gap-4">
-                                <h4 className="text-sm font-semibold text-gray-900">{toHindiDataText(m.month)}</h4>
-                                <span className="rounded bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">{toHindiDataText(m.focus)}</span>
+                            <div key={idx} className="rounded-lg border bg-white p-4 hover:shadow-md transition-shadow">
+                              <div className="flex items-start justify-between gap-4 mb-3">
+                                <h4 className="text-sm font-bold text-gray-900">{toHindiDataText(m.month)}</h4>
+                                <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-700">{toHindiDataText(m.focus)}</span>
                               </div>
-                              <p className="mt-2 text-xs text-gray-700"><span className="font-semibold">{language === 'hi' ? 'सलाह' : 'Advice'}:</span> {localizeYearlyLine(m.advice)}</p>
-                              <p className="mt-1 text-xs text-red-700"><span className="font-semibold">{language === 'hi' ? 'सावधानी' : 'Caution'}:</span> {localizeYearlyLine(m.caution)}</p>
+
+                              {m.dashaInfluence && (
+                                <p className="text-xs text-purple-700 mb-2 italic">{toHindiDataText(m.dashaInfluence)}</p>
+                              )}
+
+                              <div className="space-y-2 text-xs text-gray-700">
+                                <div>
+                                  <span className="font-semibold text-gray-900">{language === 'hi' ? 'सलाह:' : 'Advice:'}</span> {toHindiDataText(m.advice)}
+                                </div>
+                                <div>
+                                  <span className="font-semibold text-red-700">{language === 'hi' ? 'सावधानी:' : 'Caution:'}</span> {toHindiDataText(m.caution)}
+                                </div>
+                                {m.lifeAreaTriggers?.length ? (
+                                  <div>
+                                    <span className="font-semibold text-gray-900">{language === 'hi' ? 'जीवन क्षेत्र:' : 'Life Areas:'}</span> {m.lifeAreaTriggers.map(t => toHindiDataText(t)).join(', ')}
+                                  </div>
+                                ) : null}
+                                {m.practicalTips?.length ? (
+                                  <div>
+                                    <span className="font-semibold text-green-700">{language === 'hi' ? 'सुझाव:' : 'Tips:'}</span> {m.practicalTips.map(t => toHindiDataText(t)).join(', ')}
+                                  </div>
+                                ) : null}
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1153,43 +1619,186 @@ function KundaliContent() {
                       <CardTitle>{language === 'hi' ? 'विंशोत्तरी दशा (अंतरदशा सहित)' : 'Vimshottari Dasha with Antardasha'}</CardTitle>
                     </CardHeader>
                     <CardContent>
+                      <div className="space-y-4">
+                        {chart.comprehensiveReport.dashas.map((dasha) => {
+                          const start = new Date(dasha.startDate)
+                          const end = new Date(dasha.endDate)
+                          const fallbackDuration = Math.max(
+                            0,
+                            Math.round((((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)) * 100)) / 100
+                          )
+                          const durationYears = dasha.durationYears ?? fallbackDuration
+                          const phase = dasha.phase ?? (dasha.isCurrent ? 'current' : (new Date() >= end ? 'completed' : 'upcoming'))
+                          const progressPercent = dasha.progressPercent ?? (dasha.isCurrent ? 50 : (phase === 'completed' ? 100 : 0))
+                          const focusArea = dasha.focusArea ?? (language === 'hi' ? 'जीवन क्षेत्र सक्रियण' : 'General life activation')
+                          const keyThemes = dasha.keyThemes ?? []
+                          const cautionAreas = dasha.cautionAreas ?? []
+                          const antardashas = dasha.antardashas ?? []
+
+                          return <div key={`${dasha.planet}-${dasha.startDate}`} className={`rounded-lg border p-4 ${dasha.isCurrent ? 'border-orange-300 bg-orange-50' : 'border-gray-200 bg-white'}`}>
+                            <div className="flex flex-wrap items-center justify-between gap-3">
+                              <div>
+                                <p className="text-sm font-bold text-gray-900">
+                                  {localizePlanetName(dasha.planet)}
+                                  {dasha.isCurrent ? <span className="ml-2 text-xs font-medium text-orange-700">({language === 'hi' ? 'वर्तमान' : 'Current'})</span> : null}
+                                </p>
+                                <p className="text-xs text-gray-600">{dasha.startDate} → {dasha.endDate}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-gray-500">{language === 'hi' ? 'अवधि' : 'Duration'}</p>
+                                <p className="text-sm font-semibold text-gray-900">{durationYears} {language === 'hi' ? 'वर्ष' : 'years'}</p>
+                              </div>
+                            </div>
+
+                            <div className="mt-3 grid gap-3 sm:grid-cols-3">
+                              <div>
+                                <p className="text-xs text-gray-500">{language === 'hi' ? 'चरण' : 'Phase'}</p>
+                                <p className="text-sm font-medium text-gray-800">{phase === 'current' ? (language === 'hi' ? 'सक्रिय' : 'Current') : phase === 'completed' ? (language === 'hi' ? 'समाप्त' : 'Completed') : (language === 'hi' ? 'आगामी' : 'Upcoming')}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">{language === 'hi' ? 'प्रगति' : 'Progress'}</p>
+                                <p className="text-sm font-medium text-gray-800">{progressPercent}%</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-gray-500">{language === 'hi' ? 'फोकस क्षेत्र' : 'Focus Area'}</p>
+                                <p className="text-sm font-medium text-gray-800">{toHindiDataText(focusArea)}</p>
+                              </div>
+                            </div>
+
+                            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                              <div className="h-full rounded-full bg-orange-500" style={{ width: `${progressPercent}%` }} />
+                            </div>
+
+                            <div className="mt-3 grid gap-3 md:grid-cols-2">
+                              <div>
+                                <p className="text-xs font-semibold text-green-700">{language === 'hi' ? 'मुख्य थीम' : 'Key Themes'}</p>
+                                <ul className="mt-1 space-y-1 text-xs text-gray-700">
+                                  {keyThemes.map((line, idx) => (
+                                    <li key={idx}>• {toHindiDataText(line)}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                              <div>
+                                <p className="text-xs font-semibold text-red-700">{language === 'hi' ? 'सावधानियां' : 'Caution Areas'}</p>
+                                <ul className="mt-1 space-y-1 text-xs text-gray-700">
+                                  {cautionAreas.map((line, idx) => (
+                                    <li key={idx}>• {toHindiDataText(line)}</li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+
+                            <div className="mt-4 overflow-x-auto rounded border bg-gray-50">
+                              <table className="w-full text-xs">
+                                <thead className="bg-gray-100">
+                                  <tr>
+                                    <th className="px-2 py-2 text-left">{language === 'hi' ? 'अंतरदशा' : 'Antardasha'}</th>
+                                    <th className="px-2 py-2 text-left">{language === 'hi' ? 'आरंभ' : 'Start'}</th>
+                                    <th className="px-2 py-2 text-left">{language === 'hi' ? 'समाप्ति' : 'End'}</th>
+                                    <th className="px-2 py-2 text-left">{language === 'hi' ? 'अवधि' : 'Duration'}</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-200">
+                                  {antardashas.map((antar, idx) => (
+                                    <tr key={`${dasha.planet}-${antar.planet}-${idx}`} className={antar.isCurrent ? 'bg-orange-100/60' : ''}>
+                                      <td className="px-2 py-2 font-medium text-gray-900">
+                                        {localizePlanetName(antar.planet)}
+                                        {antar.isCurrent ? <span className="ml-1 text-[10px] text-orange-700">({language === 'hi' ? 'सक्रिय' : 'Active'})</span> : null}
+                                      </td>
+                                      <td className="px-2 py-2 text-gray-700">{antar.startDate}</td>
+                                      <td className="px-2 py-2 text-gray-700">{antar.endDate}</td>
+                                      <td className="px-2 py-2 text-gray-700">{antar.durationYears} {language === 'hi' ? 'वर्ष' : 'yrs'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        })}
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {chart.comprehensiveReport?.yoginiDashas?.length ? (
+                  <Card className="shadow-lg">
+                    <CardHeader>
+                      <CardTitle>{language === 'hi' ? 'योगिनी दशा (डायनेमिक)' : 'Yogini Dasha (Dynamic)'}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
                       <div className="overflow-x-auto">
                         <table className="w-full text-sm">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th className="px-3 py-2 text-left font-semibold">{language === 'hi' ? 'महादशा' : 'Mahadasha'}</th>
-                              <th className="px-3 py-2 text-left font-semibold">{language === 'hi' ? 'आरंभ तिथि' : 'Start Date'}</th>
-                              <th className="px-3 py-2 text-left font-semibold">{language === 'hi' ? 'समाप्ति तिथि' : 'End Date'}</th>
+                              <th className="px-3 py-2 text-left font-semibold">{language === 'hi' ? 'योगिनी' : 'Yogini'}</th>
+                              <th className="px-3 py-2 text-left font-semibold">{language === 'hi' ? 'स्वामी ग्रह' : 'Ruling Planet'}</th>
+                              <th className="px-3 py-2 text-left font-semibold">{language === 'hi' ? 'आरंभ' : 'Start'}</th>
+                              <th className="px-3 py-2 text-left font-semibold">{language === 'hi' ? 'समाप्ति' : 'End'}</th>
                               <th className="px-3 py-2 text-left font-semibold">{language === 'hi' ? 'अवधि' : 'Duration'}</th>
+                              <th className="px-3 py-2 text-left font-semibold">{language === 'hi' ? 'प्रगति' : 'Progress'}</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-gray-100">
-                            {chart.comprehensiveReport.dashas.map((dasha) => {
-                              const start = new Date(dasha.startDate)
-                              const end = new Date(dasha.endDate)
-                              const durationYears = Math.max(
-                                0,
-                                Math.round((((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24 * 365.2425)) * 100)) / 100
-                              )
-
-                              return (
-                                <tr key={`${dasha.planet}-${dasha.startDate}`} className={dasha.isCurrent ? 'bg-orange-50' : ''}>
-                                  <td className="px-3 py-2 font-bold text-gray-900">
-                                    {localizePlanetName(dasha.planet)}
-                                    {dasha.isCurrent && <span className="ml-2 text-xs text-orange-600">({language === 'hi' ? 'वर्तमान' : 'Current'})</span>}
-                                  </td>
-                                  <td className="px-3 py-2 text-gray-600">{dasha.startDate}</td>
-                                  <td className="px-3 py-2 text-gray-600">{dasha.endDate}</td>
-                                  <td className="px-3 py-2 text-gray-600">{durationYears} {language === 'hi' ? 'वर्ष' : 'years'}</td>
-                                </tr>
-                              )
-                            })}
+                            {chart.comprehensiveReport.yoginiDashas.map((y, idx) => (
+                              <tr key={`${y.yogini}-${y.startDate}-${idx}`} className={y.isCurrent ? 'bg-orange-50' : ''}>
+                                <td className="px-3 py-2 font-semibold text-gray-900">
+                                  {y.yogini}
+                                  {y.isCurrent ? <span className="ml-2 text-xs text-orange-700">({language === 'hi' ? 'सक्रिय' : 'Active'})</span> : null}
+                                </td>
+                                <td className="px-3 py-2 text-gray-700">{localizePlanetName(y.planet)}</td>
+                                <td className="px-3 py-2 text-gray-700">{y.startDate}</td>
+                                <td className="px-3 py-2 text-gray-700">{y.endDate}</td>
+                                <td className="px-3 py-2 text-gray-700">{y.durationYears} {language === 'hi' ? 'वर्ष' : 'years'}</td>
+                                <td className="px-3 py-2 text-gray-700">{y.progressPercent}%</td>
+                              </tr>
+                            ))}
                           </tbody>
                         </table>
                       </div>
                     </CardContent>
                   </Card>
-                )}
+                ) : null}
+
+                {chart.comprehensiveReport?.charaDashas?.length ? (
+                  <Card className="shadow-lg">
+                    <CardHeader>
+                      <CardTitle>{language === 'hi' ? 'चर दशा (डायनेमिक)' : 'Chara Dasha (Dynamic)'}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="space-y-3">
+                        {chart.comprehensiveReport.charaDashas.map((c, idx) => (
+                          <div key={`${c.signIndex}-${c.startDate}-${idx}`} className={`rounded-lg border p-3 ${c.isCurrent ? 'border-blue-300 bg-blue-50' : 'border-gray-200 bg-white'}`}>
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <p className="text-sm font-semibold text-gray-900">
+                                {c.signName}
+                                {c.isCurrent ? <span className="ml-2 text-xs text-blue-700">({language === 'hi' ? 'सक्रिय' : 'Active'})</span> : null}
+                              </p>
+                              <p className="text-xs text-gray-600">{c.startDate} → {c.endDate} ({c.durationYears} {language === 'hi' ? 'वर्ष' : 'years'})</p>
+                            </div>
+                            <p className="mt-1 text-xs text-gray-700">{toHindiDataText(c.focusArea)}</p>
+                            <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                              <div className="h-full rounded-full bg-blue-500" style={{ width: `${c.progressPercent}%` }} />
+                            </div>
+                            <div className="mt-2 grid gap-2 md:grid-cols-2 text-xs">
+                              <div>
+                                <p className="font-semibold text-green-700">{language === 'hi' ? 'मुख्य थीम' : 'Key Themes'}</p>
+                                <ul className="mt-1 space-y-1 text-gray-700">
+                                  {c.keyThemes.map((line, i) => <li key={i}>• {toHindiDataText(line)}</li>)}
+                                </ul>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-red-700">{language === 'hi' ? 'सावधानियां' : 'Caution Areas'}</p>
+                                <ul className="mt-1 space-y-1 text-gray-700">
+                                  {c.cautionAreas.map((line, i) => <li key={i}>• {toHindiDataText(line)}</li>)}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
               </div>
             )}
 
@@ -1218,9 +1827,21 @@ function KundaliContent() {
                     </Button>
                   </Link>
                 )}
+                {localCacheStatus !== "none" ? (
+                  <Button
+                    variant="outline"
+                    className="border-red-300 text-red-300 hover:bg-red-500/10 px-8 py-6 text-lg"
+                    onClick={clearLocalChart}
+                  >
+                    {language === "hi" ? "लोकल डेटा हटाएं" : "Clear Local Data"}
+                  </Button>
+                ) : null}
               </div>
               <button
-                onClick={() => setChart(null)}
+                onClick={() => {
+                  setChart(null)
+                  clearLocalChart()
+                }}
                 className="mt-6 text-sm text-gray-400 hover:text-yellow-400 underline"
               >
                 {t.generateAnother}

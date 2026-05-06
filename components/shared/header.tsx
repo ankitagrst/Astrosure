@@ -36,6 +36,8 @@ export function Header({ showRashis = true }: { showRashis?: boolean }) {
   const navItems = [
     { href: "/", label: "Home", icon: Home },
     { href: "/kundali", label: "Kundali", icon: Sparkles },
+    { href: "/numerology", label: "Numerology", icon: Sparkles },
+    { href: "/tarot", label: "Tarot", icon: Sparkles },
     { href: "/panchang", label: "Panchang", icon: Calendar },
     { href: "/horoscope", label: "Horoscope", icon: Sparkles },
     { href: "/consultations", label: "Consult", icon: MessageCircle },
@@ -66,6 +68,7 @@ export function Header({ showRashis = true }: { showRashis?: boolean }) {
         { href: "/numerology", label: "Lucky Color" },
         { href: "/numerology", label: "Baby Name Finder" },
         { href: "/numerology", label: "Lucky Vehicle Number" },
+        { href: "/tarot", label: "Tarot Reading" },
       ],
     },
     {
@@ -82,6 +85,7 @@ export function Header({ showRashis = true }: { showRashis?: boolean }) {
     pathname.startsWith("/services") ||
     pathname.startsWith("/astro-tools") ||
     pathname.startsWith("/numerology") ||
+    pathname.startsWith("/tarot") ||
     pathname.startsWith("/love-fun") ||
     pathname.startsWith("/kundli-matching")
 
@@ -284,6 +288,9 @@ export function Header({ showRashis = true }: { showRashis?: boolean }) {
                   <div className="mt-2 space-y-1">
                     <MobileNavLink href="/services/free" onNavigate={() => setMobileMenuOpen(false)}>All Services</MobileNavLink>
                     <MobileNavLink href="/horoscope" onNavigate={() => setMobileMenuOpen(false)}>Horoscope</MobileNavLink>
+                    <MobileNavLink href="/numerology" onNavigate={() => setMobileMenuOpen(false)}>Numerology</MobileNavLink>
+                    <MobileNavLink href="/tarot" onNavigate={() => setMobileMenuOpen(false)}>Tarot Reading</MobileNavLink>
+                    <MobileNavLink href="/love-fun" onNavigate={() => setMobileMenuOpen(false)}>Love & Fun</MobileNavLink>
                   </div>
                 </div>
 

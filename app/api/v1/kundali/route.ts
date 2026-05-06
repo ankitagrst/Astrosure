@@ -9,6 +9,24 @@ import { Language } from "@/lib/i18n"
 
 export const runtime = "nodejs"
 
+function buildKundaliNarrative(report: any) {
+  const predictionLines = Array.isArray(report?.predictions)
+    ? report.predictions.slice(0, 4).map((p: any) => `${p.category}: ${p.description}`)
+    : []
+  const traitLines = Array.isArray(report?.characterAnalysis)
+    ? report.characterAnalysis.slice(0, 3).map((t: any) => `${t.trait} (${t.strength}/10) - ${t.description}`)
+    : []
+  const remedies = Array.isArray(report?.remedies) ? report.remedies.slice(0, 5) : []
+
+  return {
+    overallSummary:
+      "This interpretation translates planetary patterns into practical life themes. Use it as guidance for timing, priorities, and self-awareness rather than fixed destiny.",
+    lifeThemes: predictionLines,
+    personalityDynamics: traitLines,
+    practicalRemedies: remedies,
+  }
+}
+
 // GET - List saved charts (requires authentication)
 export async function GET() {
   try {
@@ -132,6 +150,7 @@ export async function POST(req: Request) {
         calculationMethod: "Birth Place Time",
         mahakaalInfo: null,
         comprehensiveReport,
+        detailedNarrative: buildKundaliNarrative(comprehensiveReport),
       }, 201)
     }
 
@@ -149,6 +168,7 @@ export async function POST(req: Request) {
       calculationMethod: "Birth Place Time",
       mahakaalInfo: null,
       comprehensiveReport,
+      detailedNarrative: buildKundaliNarrative(comprehensiveReport),
     }, 200)
   } catch (err) {
     console.error("[KUNDALI_POST]", err)

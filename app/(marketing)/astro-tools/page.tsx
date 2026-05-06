@@ -79,6 +79,36 @@ function AstroToolsContent() {
     }
   }, [result])
 
+  const detailedExplanation = useMemo(() => {
+    if (!derived) return null
+
+    if (activeTool === "moon-sign") {
+      return `Your Moon is in ${derived.moon?.signName || "-"}, Nakshatra ${derived.moon?.nakshatra || "-"} (Pada ${derived.moon?.pada || "-"}). This combination describes emotional patterns, instinctive reactions, and relationship comfort style. Moon sign gives the broad emotional temperament, while Nakshatra and Pada refine how that temperament appears in daily decisions.`
+    }
+
+    if (activeTool === "nakshatra") {
+      return `Nakshatra ${derived.moon?.nakshatra || "-"} with Pada ${derived.moon?.pada || "-"} is a deeper behavioral signature than only zodiac sign. It helps explain communication tone, motivation style, and subtle mental patterns. In practical use, this is useful for timing-sensitive choices and compatibility interpretation.`
+    }
+
+    if (activeTool === "lagna-navamsa") {
+      return `D1 Lagna (${derived.ascendant?.signName || "-"}) represents your outer personality, practical life direction, and how others perceive your approach. D9 Navamsa Lagna (${derived.navamsaAscendant?.signName || "-"}) represents deeper maturity and dharmic alignment. Reading both together gives a clearer picture than either chart alone.`
+    }
+
+    if (activeTool === "rahu-ketu") {
+      return `Rahu in ${derived.rahu?.signName || "-"} (House ${derived.rahu?.house || "-"}) shows growth pressure, ambition, and unfamiliar karmic lessons. Ketu in ${derived.ketu?.signName || "-"} (House ${derived.ketu?.house || "-"}) shows inherited strengths and detachment zones. Balance between these poles is key for stable progress.`
+    }
+
+    if (activeTool === "sade-sati") {
+      return derived.sadeSati?.present
+        ? "Sade Sati appears active in your computed report. This usually indicates a Saturn phase focused on responsibility, restructuring, and emotional maturity. Consistency, patience, and disciplined routines generally produce better outcomes in this period than short-term risk-taking."
+        : "Sade Sati does not appear active in your current computed context. This generally indicates lower Saturn pressure and smoother execution cycles compared with active transit phases."
+    }
+
+    return derived.remedies.length
+      ? `These Lal Kitab recommendations are generated from currently active dosha conditions and planetary patterns. Priority remedies right now: ${derived.remedies.slice(0, 3).join(", ")}. Apply consistently over time for best effect.`
+      : "No major remedial stress is detected from current report conditions. Continue preventive spiritual discipline and balanced routines for long-term chart stability."
+  }, [activeTool, derived])
+
   async function calculate() {
     setIsLoading(true)
     setError(null)
@@ -219,6 +249,17 @@ function AstroToolsContent() {
                 ) : (
                   <p>No major remedial set required from current report.</p>
                 )}
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {detailedExplanation ? (
+            <Card className="card-lift border-orange-100 bg-white/90 md:col-span-2">
+              <CardHeader>
+                <CardTitle>Detailed Interpretation</CardTitle>
+              </CardHeader>
+              <CardContent className="text-sm leading-7 text-slate-700">
+                <p>{detailedExplanation}</p>
               </CardContent>
             </Card>
           ) : null}

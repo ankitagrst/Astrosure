@@ -6,6 +6,12 @@ export default async function middleware(req: NextRequest) {
   const token = await getToken({ req, secret: process.env.NEXTAUTH_SECRET })
   const role = token?.role as string | undefined
 
+  const responseWithNoIndex = () => {
+    const response = NextResponse.next()
+    response.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive')
+    return response
+  }
+
   // Admin routes - only ADMIN role
   if (pathname.startsWith('/admin') && role !== 'ADMIN') {
     return NextResponse.redirect(new URL('/login', req.url))
@@ -14,6 +20,15 @@ export default async function middleware(req: NextRequest) {
   // Astrologer portal - ASTROLOGER or ADMIN
   if (pathname.startsWith('/astrologer-portal') && role !== 'ASTROLOGER' && role !== 'ADMIN') {
     return NextResponse.redirect(new URL('/login', req.url))
+  }
+
+  if (
+    pathname.startsWith('/dashboard') ||
+    pathname.startsWith('/admin') ||
+    pathname.startsWith('/astrologer-portal') ||
+    pathname.startsWith('/api/')
+  ) {
+    return responseWithNoIndex()
   }
 
   return NextResponse.next()

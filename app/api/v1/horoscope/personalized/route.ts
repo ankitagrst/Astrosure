@@ -79,6 +79,27 @@ export async function POST(req: Request) {
       wellbeingFocus: `Moon nakshatra ${moon.nakshatra} suggests managing emotional bandwidth before major decisions.`,
     }
 
+    const detailedNarrative = {
+      emotionalTone:
+        `Moon in ${moon.signName} and Nakshatra ${moon.nakshatra} sets today's emotional tone. ` +
+        `If you feel mentally scattered, reduce decision volume and finish high-priority tasks first.`,
+      actionStrategy:
+        `Ascendant ${ascendant.signName} indicates best results through ${ascendant.house <= 4 ? "foundation-building" : ascendant.house <= 8 ? "strategic alignment" : "expansion and visibility"} actions. ` +
+        `Prefer practical, stepwise execution over impulsive shifts.`,
+      relationshipAdvice:
+        horoscope.compatibility.includes(moon.signName)
+          ? "Compatibility indicators are favorable today. It is a good window for important conversations, reconciliation, and commitment planning."
+          : "Compatibility indicators are mixed today. Keep communication simple, avoid assumptions, and validate expectations before reacting.",
+      panchangBlend:
+        `Today's Panchang blend (${panchangComputed.tithi}, ${panchangComputed.nakshatra}, ${panchangComputed.yoga}, ${panchangComputed.karana}) supports timing-aware actions. ` +
+        `Use the early part of the day for planning and the stable mid-window for commitments where possible.`,
+      practicalChecklist: [
+        "Start with one clear priority block before checking low-value tasks.",
+        "Avoid emotional decision-making in high-stakes conversations.",
+        "Use a short evening review to realign tomorrow's top 3 priorities.",
+      ],
+    }
+
     return successResponse({
       profile: {
         name: body.name.trim(),
@@ -93,6 +114,7 @@ export async function POST(req: Request) {
       },
       horoscope,
       personalInsights,
+      detailedNarrative,
       calculationBasis: [
         "Birth-date, birth-time, and geocoded birthplace",
         "Swiss Ephemeris based planetary longitudes",

@@ -193,6 +193,14 @@ export const FREE_ASTROLOGY_SERVICES: FreeService[] = [
     category: "free",
   },
   {
+    slug: "tarot-reading",
+    title: "Tarot Reading",
+    subtitle: "Dynamic Spread Analysis",
+    description: "Generate deterministic tarot spreads with card orientation, elemental balance, and numerology resonance.",
+    href: "/tarot",
+    category: "free",
+  },
+  {
     slug: "daily-horoscope",
     title: "Daily Horoscope",
     subtitle: "Panchang-Based Daily Guidance",

@@ -12,6 +12,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/horoscope",
     "/astro-tools",
     "/numerology",
+    "/tarot",
     "/love-fun",
     "/kundli-matching",
     "/kundali",
@@ -20,8 +21,6 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "/services/free",
     "/privacy",
     "/terms",
-    "/login",
-    "/register",
     "/astrologer/register",
   ]
 

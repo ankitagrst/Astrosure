@@ -20,6 +20,7 @@ const recoveryLinks = [
   { href: "/kundali", label: "Kundali", icon: Star, description: "Generate or view birth chart calculations." },
   { href: "/astro-tools", label: "Astrology Calculators", icon: CalendarDays, description: "Moon sign, Nakshatra, Lagna, and more." },
   { href: "/numerology", label: "Numerology & Fun", icon: Sigma, description: "Life path, destiny, personal year, and Lo-Shu." },
+  { href: "/tarot", label: "Tarot Reading", icon: Sparkles, description: "Dynamic spread with deterministic card draw and guidance." },
   { href: "/love-fun", label: "Love & Fun", icon: HeartHandshake, description: "FLAMES and love compatibility tools." },
   { href: "/kundli-matching", label: "Kundli Matching", icon: Sparkles, description: "Detailed Ashtakoot marriage compatibility." },
   { href: "/horoscope", label: "Horoscope", icon: Globe2, description: "Daily and personalized horoscope guidance." },

@@ -90,6 +90,13 @@ export default function PublicHoroscopePage() {
       careerFocus: string
       wellbeingFocus: string
     }
+    detailedNarrative?: {
+      emotionalTone: string
+      actionStrategy: string
+      relationshipAdvice: string
+      panchangBlend: string
+      practicalChecklist: string[]
+    }
   } | null>(null)
 
   const today = useMemo(() => new Date().toISOString().split("T")[0], [])
@@ -252,6 +259,20 @@ export default function PublicHoroscopePage() {
                   <p className="mt-1">{personalized.personalInsights.careerFocus}</p>
                   <p className="mt-1">{personalized.personalInsights.wellbeingFocus}</p>
                 </div>
+                {personalized.detailedNarrative ? (
+                  <div className="card-lift rounded-xl border border-emerald-100 bg-emerald-50/70 p-4 text-sm leading-7 text-slate-700 md:col-span-2">
+                    <p className="font-semibold text-slate-900">Detailed Daily Interpretation</p>
+                    <p className="mt-2">{personalized.detailedNarrative.emotionalTone}</p>
+                    <p className="mt-1">{personalized.detailedNarrative.actionStrategy}</p>
+                    <p className="mt-1">{personalized.detailedNarrative.relationshipAdvice}</p>
+                    <p className="mt-1">{personalized.detailedNarrative.panchangBlend}</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5">
+                      {personalized.detailedNarrative.practicalChecklist.map((item) => (
+                        <li key={item}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ) : null}
               </div>
             ) : null}
           </CardContent>

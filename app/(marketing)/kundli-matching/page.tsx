@@ -39,6 +39,12 @@ export default function PublicKundliMatchingPage() {
         girl: { sign: string; nakshatra: string; pada: number }
       }
     }
+    detailedAnalysis?: {
+      summary: string
+      strengths: string[]
+      watchouts: string[]
+      practicalGuidance: string
+    }
   } | null>(null)
 
   async function checkCompatibility() {
@@ -180,6 +186,32 @@ export default function PublicKundliMatchingPage() {
                 </div>
               ))}
             </div>
+
+            {result.detailedAnalysis ? (
+              <div className="rounded-xl border border-orange-100 bg-white p-5">
+                <h3 className="text-base font-semibold text-slate-900">Detailed Compatibility Interpretation</h3>
+                <p className="mt-3 text-sm leading-7 text-slate-700">{result.detailedAnalysis.summary}</p>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Strength areas</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                      {result.detailedAnalysis.strengths.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900">Watch areas</p>
+                    <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-slate-700">
+                      {result.detailedAnalysis.watchouts.map((line) => (
+                        <li key={line}>{line}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+                <p className="mt-4 text-sm leading-7 text-slate-700">{result.detailedAnalysis.practicalGuidance}</p>
+              </div>
+            ) : null}
           </CardContent>
         </Card>
       ) : null}

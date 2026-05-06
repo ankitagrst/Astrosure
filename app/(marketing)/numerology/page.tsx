@@ -64,10 +64,47 @@ export default function NumerologyPage() {
             <CardContent className="space-y-2 text-sm text-slate-700">
               <p>Life Path: <strong>{result.report.lifePath}</strong> - {result.report.lifePathMeaning}</p>
               <p>Destiny Number: <strong>{result.report.destinyNumber}</strong> - {result.report.destinyMeaning}</p>
+              <p>Soul Urge: <strong>{result.report.soulUrgeNumber}</strong> - {result.report.soulUrgeMeaning}</p>
+              <p>Personality Number: <strong>{result.report.personalityNumber}</strong> - {result.report.personalityMeaning}</p>
+              <p>Birthday Number: <strong>{result.report.birthdayNumber}</strong> - {result.report.birthdayMeaning}</p>
+              <p>Attitude Number: <strong>{result.report.attitudeNumber}</strong> - {result.report.attitudeMeaning}</p>
+              <p>Maturity Number: <strong>{result.report.maturityNumber}</strong> - {result.report.maturityMeaning}</p>
               <p>Personal Year ({result.profile.targetYear}): <strong>{result.report.personalYear}</strong> - {result.report.personalYearMeaning}</p>
+              <p>Personal Month: <strong>{result.report.personalMonth}</strong> - {result.report.personalMonthMeaning}</p>
+              <p>Personal Day: <strong>{result.report.personalDay}</strong> - {result.report.personalDayMeaning}</p>
               <p>Lucky Color: <strong>{result.report.luckyColor}</strong></p>
             </CardContent>
           </Card>
+
+          {result.report.detailedNarrative ? (
+            <Card className="border-orange-100 bg-white/90 md:col-span-2">
+              <CardHeader><CardTitle>Detailed Interpretation</CardTitle></CardHeader>
+              <CardContent className="space-y-3 text-sm leading-7 text-slate-700">
+                <p>{result.report.detailedNarrative.lifePath}</p>
+                <p>{result.report.detailedNarrative.destiny}</p>
+                <p>{result.report.detailedNarrative.personality}</p>
+                <p>{result.report.detailedNarrative.personalYear}</p>
+                <p>{result.report.detailedNarrative.cycles}</p>
+                <p>{result.report.detailedNarrative.loShu}</p>
+                <p>{result.report.detailedNarrative.practicalGuidance}</p>
+              </CardContent>
+            </Card>
+          ) : null}
+
+          {result.report.pinnacleCycles?.length ? (
+            <Card className="border-orange-100 bg-white/90 md:col-span-2">
+              <CardHeader><CardTitle>Pinnacle & Challenge Cycles</CardTitle></CardHeader>
+              <CardContent className="grid gap-3 md:grid-cols-2 text-sm text-slate-700">
+                {result.report.pinnacleCycles.map((cycle: any, idx: number) => (
+                  <div key={idx} className="rounded-lg border border-orange-100 bg-white p-3">
+                    <p className="font-semibold text-slate-900">Cycle {idx + 1} ({cycle.startAge} - {cycle.endAge ?? "onward"})</p>
+                    <p className="mt-1">Pinnacle: <strong>{cycle.pinnacle}</strong> - {cycle.pinnacleMeaning}</p>
+                    <p>Challenge: <strong>{cycle.challenge}</strong> - {cycle.challengeMeaning}</p>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          ) : null}
 
           <Card className="border-orange-100 bg-white/90">
             <CardHeader><CardTitle>Lo-Shu Grid</CardTitle></CardHeader>
